@@ -208,11 +208,17 @@ function dayLabel(d) {
 .cal-day.weekend { background: var(--weekend); }
 .cal-day.weekend:hover { background: color-mix(in srgb, var(--primary) 6%, var(--weekend)); }
 .cal-day.weekend .num { color: var(--weekend-num); font-weight: 500; }
-.cal-day.holiday {
-  background:
-    repeating-linear-gradient(-45deg, transparent 0 7px, color-mix(in srgb, var(--holiday) 5%, transparent) 7px 14px),
-    var(--weekend);
+.cal-day.holiday { background: var(--weekend); isolation: isolate; }
+/* Festivos: estrellas fugaces difuminadas. El SVG solo hace de máscara, así que toman el color
+   --holiday del tema; isolation + z-index -1 las dejan sobre el fondo de la celda y bajo el texto */
+.cal-day.holiday::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--holiday); opacity: var(--meteor-opacity, .32);
+  -webkit-mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 104'><defs><linearGradient id='t'><stop offset='0' stop-opacity='0'/><stop offset='1'/></linearGradient><filter id='b' x='-20%' y='-200%' width='140%' height='500%'><feGaussianBlur stdDeviation='1.1'/></filter><filter id='h'><feGaussianBlur stdDeviation='2.2'/></filter></defs><g transform='translate(150 60) rotate(28)'><rect x='-86' y='-.9' width='86' height='1.8' rx='.9' fill='url(%23t)' filter='url(%23b)'/><circle r='4.5' opacity='.5' filter='url(%23h)'/><circle r='1.6'/></g><g transform='translate(78 92) rotate(28)' opacity='.7'><rect x='-52' y='-.7' width='52' height='1.4' rx='.7' fill='url(%23t)' filter='url(%23b)'/><circle r='3.4' opacity='.5' filter='url(%23h)'/><circle r='1.2'/></g><g transform='translate(118 34) rotate(28)' opacity='.45'><rect x='-26' y='-.5' width='26' height='1' rx='.5' fill='url(%23t)' filter='url(%23b)'/><circle r='1'/></g></svg>") center / cover no-repeat;
+  mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 104'><defs><linearGradient id='t'><stop offset='0' stop-opacity='0'/><stop offset='1'/></linearGradient><filter id='b' x='-20%' y='-200%' width='140%' height='500%'><feGaussianBlur stdDeviation='1.1'/></filter><filter id='h'><feGaussianBlur stdDeviation='2.2'/></filter></defs><g transform='translate(150 60) rotate(28)'><rect x='-86' y='-.9' width='86' height='1.8' rx='.9' fill='url(%23t)' filter='url(%23b)'/><circle r='4.5' opacity='.5' filter='url(%23h)'/><circle r='1.6'/></g><g transform='translate(78 92) rotate(28)' opacity='.7'><rect x='-52' y='-.7' width='52' height='1.4' rx='.7' fill='url(%23t)' filter='url(%23b)'/><circle r='3.4' opacity='.5' filter='url(%23h)'/><circle r='1.2'/></g><g transform='translate(118 34) rotate(28)' opacity='.45'><rect x='-26' y='-.5' width='26' height='1' rx='.5' fill='url(%23t)' filter='url(%23b)'/><circle r='1'/></g></svg>") center / cover no-repeat;
+  transition: opacity .4s, transform .8s var(--ease-out);
 }
+.cal-day.holiday:hover::before { opacity: calc(var(--meteor-opacity, .32) + .15); transform: translate(3px, 1.5px); }
 /* Días pasados: no se pueden pedir; se ven apagados y no reaccionan al ratón */
 .cal-day.past { cursor: default; }
 .cal-day.past:hover { background: var(--weekday); }
