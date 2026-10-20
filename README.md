@@ -38,6 +38,7 @@ Configura en `server/.env` al menos `DATABASE_URL`, un `JWT_SECRET` largo y el a
 | **Acumulación** | Los días no caducan: saldo = inicial + generado en todos los ciclos + ajustes − aprobados − pendientes |
 | **Asuntos propios** | Cupo por ciclo (2 por defecto, editable), en días laborables, **no** acumulable |
 | **Médico / teletrabajo** | Sin cupo; médico admite horas; teletrabajo no cuenta como «fuera» en el cuadrante |
+| **Días no laborables** | Fines de semana y festivos no se pueden pedir: toda ausencia empieza en un día laborable. Unas vacaciones sí pueden abarcarlos (de lunes a domingo = 7 días naturales) |
 | **Por horas** | En los tipos con «Permite horas» (por defecto vacaciones, médico y teletrabajo): un solo día laborable, descuenta `horas / WORKDAY_HOURS` días (2 h de 8 h = 0,25). Varias el mismo día si no se solapan |
 | **Jerarquía** | Cada sección puede depender de otra (Administración → Secciones → «Depende de»). Lógica en `server/src/org.js` |
 | **Aprobación** | Usuario → jefe(s) de su sección. Jefe → jefe(s) de la sección superior. Si en un nivel no hay jefe, se sube al siguiente; arriba del todo, administradores. Las pendientes aparecen en la pestaña «Revisar» de quien puede aprobarlas (no se envían correos) |

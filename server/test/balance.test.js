@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { accrualByCycle } from '../src/balance.js';
-import { countDays, cycleOf, easterSunday, hoursBetween, hoursToDays, isValidTime } from '../../shared/dates.js';
+import { countDays, cycleOf, easterSunday, hoursBetween, hoursToDays, isValidTime, isWorkingDay, nextWorkingDay } from '../../shared/dates.js';
 
 test('cycleOf: el ciclo va del 1 de septiembre al 31 de agosto', () => {
   assert.deepEqual(cycleOf('2026-08-31'), { start: '2025-09-01', end: '2026-08-31', label: '2025/2026' });
@@ -61,4 +61,15 @@ test('domingo de Pascua', () => {
   assert.equal(easterSunday(2025), '2025-04-20');
   assert.equal(easterSunday(2026), '2026-04-05');
   assert.equal(easterSunday(2027), '2027-03-28');
+});
+
+test('días laborables: ni fines de semana ni festivos', () => {
+  const holidays = new Set(['2026-10-12']);
+  assert.equal(isWorkingDay('2026-10-30'), true); // viernes
+  assert.equal(isWorkingDay('2026-10-31'), false); // sábado
+  assert.equal(isWorkingDay('2026-11-01'), false); // domingo
+  assert.equal(isWorkingDay('2026-10-12', holidays), false); // festivo en lunes
+  assert.equal(nextWorkingDay('2026-10-31'), '2026-11-02'); // del sábado al lunes
+  assert.equal(nextWorkingDay('2026-10-10', holidays), '2026-10-13'); // sábado, domingo y festivo
+  assert.equal(nextWorkingDay('2026-10-28'), '2026-10-28'); // ya es laborable
 });

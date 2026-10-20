@@ -190,7 +190,7 @@ async function onDecided() {
       </Transition>
     </div>
     <p class="muted small">
-      Pulsa un día, de hoy en adelante, para solicitar una ausencia. La barrita inferior de cada día muestra la ocupación
+      Pulsa un día laborable, de hoy en adelante, para solicitar una ausencia. La barrita inferior de cada día muestra la ocupación
       <template v-if="headcount">sobre {{ headcount }} personas</template>: verde, ámbar o coral según cuánta gente falta
       (lo rayado es lo que faltaría si se aprueba lo pendiente). El teletrabajo no cuenta.
     </p>

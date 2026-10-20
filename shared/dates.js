@@ -40,13 +40,23 @@ export function todayStr(timeZone) {
  * Cuenta días entre dos fechas (incluidas): 'natural' o 'laborable'
  * (lunes a viernes que no estén en `holidays`, un Set de 'YYYY-MM-DD').
  */
+/** Laborable: de lunes a viernes y no festivo (`holidays`, un Set de 'YYYY-MM-DD'). */
+export const isWorkingDay = (s, holidays = new Set()) => isoWeekday(s) <= 5 && !holidays.has(s);
+
+/** El propio día si es laborable; si no, el siguiente que lo sea. */
+export function nextWorkingDay(s, holidays = new Set()) {
+  let d = s;
+  for (let i = 0; i < 31 && !isWorkingDay(d, holidays); i++) d = addDays(d, 1);
+  return d;
+}
+
 export function countDays(start, end, mode = 'natural', holidays = new Set()) {
   if (end < start) return 0;
   const total = diffDays(start, end) + 1;
   if (mode === 'natural') return total;
   let n = 0;
   for (let i = 0, d = start; i < total; i++, d = addDays(d, 1)) {
-    if (isoWeekday(d) <= 5 && !holidays.has(d)) n++;
+    if (isWorkingDay(d, holidays)) n++;
   }
   return n;
 }

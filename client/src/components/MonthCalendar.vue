@@ -68,6 +68,7 @@ const weeks = computed(() => {
         inMonth: date.slice(0, 7) === props.month,
         isToday: date === today,
         past: date < today, // no se pueden pedir ausencias en días pasados
+        closed: i >= 5 || holidayByDate.value.has(date), // ni en días no laborables
         weekend: i >= 5,
         holiday: holidayByDate.value.get(date) ?? null,
         out: outCount,
@@ -155,9 +156,9 @@ function dayLabel(d) {
           :style="{ gridColumn: i + 1 }"
           :aria-label="dayLabel(d)"
           :title="d.holiday ?? undefined"
-          :disabled="d.past"
+          :disabled="d.past || d.closed"
           role="gridcell"
-          @click="!d.past && emit('day-click', d.date)"
+          @click="!d.past && !d.closed && emit('day-click', d.date)"
         >
           <span class="day-top">
             <span class="num">{{ d.day }}</span>
@@ -269,12 +270,14 @@ function dayLabel(d) {
 }
 .cal-day.holiday:hover::before { opacity: calc(var(--meteor-opacity, .32) + .15); transform: translate(3px, 1.5px); }
 /* Días pasados: no se pueden pedir; se ven apagados y no reaccionan al ratón */
-.cal-day.past { cursor: default; }
+.cal-day.past, .cal-day:disabled { cursor: default; }
 .cal-day.past:hover { background: var(--weekday); }
-.cal-day.past.weekend:hover, .cal-day.past.holiday:hover { background-color: var(--weekend); }
+.cal-day.weekend:disabled:hover, .cal-day.holiday:disabled:hover { background-color: var(--weekend); }
 .cal-day.past .num { opacity: .5; }
 .cal-day.out .num { opacity: .35; }
 .cal-day.out { background-color: color-mix(in srgb, var(--bg) 40%, var(--weekday)); }
+/* Los fines de semana de otro mes conservan su tono: la franja del sábado y el domingo no se corta */
+.cal-day.out.weekend { background-color: color-mix(in srgb, var(--bg) 40%, var(--weekend)); }
 
 .day-top { display: flex; align-items: center; gap: 6px; min-width: 0; height: 22px; }
 .num { font-family: var(--font-display); font-size: .95rem; font-weight: 650; font-variant-numeric: tabular-nums; }

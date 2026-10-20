@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import { countDays, hoursBetween, hoursToDays, maxDate, todayStr } from '@shared/dates.js';
+import { countDays, hoursBetween, hoursToDays, isWorkingDay, maxDate, nextWorkingDay, todayStr } from '@shared/dates.js';
 import { api, refreshBalance } from '../api.js';
 import { session } from '../store.js';
 import { num } from '../format.js';
@@ -9,7 +9,10 @@ const props = defineProps({ date: { type: String, required: true } });
 const emit = defineEmits(['saved', 'cancel']);
 
 const today = todayStr();
-const firstDate = maxDate(props.date, today); // nunca se propone un día pasado
+
+const holidays = computed(() => new Set(session.holidays.map((h) => h.date)));
+// Nunca se propone un día pasado ni uno no laborable
+const firstDate = nextWorkingDay(maxDate(props.date, today), holidays.value);
 
 const activeTypes = computed(() => session.types.filter((t) => t.active));
 const form = reactive({
@@ -29,12 +32,10 @@ const canHours = computed(() => !!type.value?.allows_hours);
 const mode = computed(() => (canHours.value && !allDay.value ? 'horas' : 'dias'));
 
 const workday = computed(() => session.config?.workdayHours ?? 8);
-const holidays = computed(() => new Set(session.holidays.map((h) => h.date)));
-
 /** Por horas: duración, si el día es laborable y si cabe en la jornada. */
 const hoursInfo = computed(() => {
   if (mode.value !== 'horas') return null;
-  const working = countDays(form.start_date, form.start_date, 'laborable', holidays.value) === 1;
+  const working = isWorkingDay(form.start_date, holidays.value);
   const valid = form.start_time && form.end_time && form.end_time > form.start_time;
   const hours = valid ? hoursBetween(form.start_time, form.end_time) : 0;
   let problem = null;
@@ -50,8 +51,12 @@ const days = computed(() => {
     const h = hoursInfo.value;
     return h.problem || !h.hours ? 0 : hoursToDays(h.hours, workday.value);
   }
+  if (startClosed.value) return 0;
   return countDays(form.start_date, form.end_date, type.value.count_mode, holidays.value);
 });
+
+/** Por días: tiene que empezar en un día laborable (puede abarcar fines de semana) */
+const startClosed = computed(() => mode.value === 'dias' && !!form.start_date && !isWorkingDay(form.start_date, holidays.value));
 
 /** Aviso de saldo en vivo según el tipo elegido. */
 const balanceInfo = computed(() => {
@@ -131,8 +136,9 @@ async function submit() {
       <textarea v-model="form.comment" rows="2" maxlength="500" />
     </label>
 
-    <div class="notice" :class="{ warn: hoursInfo?.problem || (balanceInfo && balanceInfo.after < 0) }">
-      <template v-if="hoursInfo?.problem">{{ hoursInfo.problem }}</template>
+    <div class="notice" :class="{ warn: startClosed || hoursInfo?.problem || (balanceInfo && balanceInfo.after < 0) }">
+      <template v-if="startClosed">Ese día no es laborable (fin de semana o festivo): elige otro día de inicio.</template>
+      <template v-else-if="hoursInfo?.problem">{{ hoursInfo.problem }}</template>
       <template v-else-if="mode === 'horas'">
         <b>{{ num(hoursInfo.hours) }} h</b>
         <template v-if="hoursInfo.hours"> · equivalen a <b>{{ num(days) }}</b> días (jornada de {{ num(workday) }} h)</template>
@@ -141,7 +147,7 @@ async function submit() {
         <b>{{ num(days) }}</b> {{ days === 1 ? 'día' : 'días' }}
         {{ type?.count_mode === 'laborable' ? (days === 1 ? 'laborable' : 'laborables (sin festivos)') : (days === 1 ? 'natural' : 'naturales') }}
       </template>
-      <template v-if="balanceInfo && !hoursInfo?.problem && days">
+      <template v-if="balanceInfo && !startClosed && !hoursInfo?.problem && days">
         · tienes {{ num(balanceInfo.available) }} {{ balanceInfo.unit }},
         <template v-if="balanceInfo.after >= 0">te quedarán <b>{{ num(balanceInfo.after) }}</b>.</template>
         <template v-else><b>no tienes saldo suficiente.</b></template>

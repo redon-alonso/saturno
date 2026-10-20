@@ -5,7 +5,7 @@ import { loadOrg, canReview, groupOf, groupWhere, visibleGroups } from '../org.j
 import { fail } from '../http.js';
 import { vacationBalance, quotaBalances, today, workdayHours } from '../balance.js';
 import { holidaySet } from './holidays.js';
-import { countDays, hoursBetween, hoursToDays, isValidDate, isValidTime, maxDate } from '../../../shared/dates.js';
+import { countDays, hoursBetween, hoursToDays, isValidDate, isValidTime, isWorkingDay, maxDate } from '../../../shared/dates.js';
 
 const router = Router();
 
@@ -128,6 +128,11 @@ router.post('/requests', async (req, res) => {
   if (start_date < today()) fail(400, 'No se pueden pedir ausencias en días que ya han pasado');
 
   const holidays = await holidaySet(start_date, end_date);
+  // Fines de semana y festivos no son laborables: no se piden. Unas vacaciones sí pueden abarcarlos
+  // (se cuentan en días naturales), pero tienen que empezar en un día laborable.
+  if (!isWorkingDay(start_date, holidays)) {
+    fail(400, 'Ese día no es laborable (fin de semana o festivo): la ausencia tiene que empezar en un día laborable');
+  }
   let days;
   let hours = null;
   if (start_time || end_time) {
