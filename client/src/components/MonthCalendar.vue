@@ -96,18 +96,14 @@ function barStyle(s, w) {
 const hhmm = (t) => t.slice(0, 5).replace(/^0/, '');
 /* Piscis, donde está Saturno: posiciones reales (declinación hacia la derecha, ascensión recta
    hacia abajo, ×10) para que la figura encaje vertical en la franja del sábado y el domingo.
-   r según el brillo: Alrescha (α), η y γ son las más brillantes. */
+   Solo las estrellas, sin líneas: quien la conozca la reconoce. r según el brillo: Alrescha (α),
+   η y γ son las más brillantes. */
 const PISCES_STARS = {
   gam: [33, 0, 3.2], s7: [54, 7, 1.8], the: [64, 27, 2.4], iot: [56, 57, 2.4], lam: [18, 62, 1.8], kap: [13, 24, 1.8],
   ome: [69, 105, 2.6], del: [76, 229, 2.2], eps: [79, 264, 2.4], zet: [76, 291, 1.8], mu: [61, 333, 2],
   nu: [55, 361, 2], xi: [32, 391, 2], alf: [28, 412, 3.2], omi: [92, 371, 2.4], eta: [154, 336, 3.4],
   rho: [192, 323, 1.6], chi: [210, 286, 2], phi: [246, 291, 2.2], ups: [273, 306, 2.2], tau: [301, 286, 2.2],
 };
-const PISCES_LINES = [
-  ['gam', 's7', 'the', 'iot', 'lam', 'kap', 'gam'], // el pez del oeste (el «Circlet»)
-  ['iot', 'ome', 'del', 'eps', 'zet', 'mu', 'nu', 'xi', 'alf'], // cordón hasta el nudo, Alrescha
-  ['alf', 'omi', 'eta', 'rho', 'chi', 'phi', 'ups', 'tau'], // cordón y pez del norte
-].map((names) => names.map((n) => PISCES_STARS[n].slice(0, 2).join(',')).join(' '));
 
 /** En el móvil solo cabe el nombre de pila */
 const firstName = (name) => name.split(/\s+/)[0];
@@ -134,11 +130,15 @@ function dayLabel(d) {
       <div class="cal-body">
       <!-- Piscis en el cielo del fin de semana, con Saturno al lado: decoración muy tenue -->
       <svg class="pisces" viewBox="-30 -30 360 470" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        <polyline v-for="(pts, i) in PISCES_LINES" :key="i" :points="pts" />
-        <circle v-for="([x, y, r], n) in PISCES_STARS" :key="n" :cx="x" :cy="y" :r="r" />
-        <g class="saturn" transform="translate(8 232) rotate(-18)">
-          <circle r="5" />
-          <ellipse rx="10" ry="2.6" />
+        <circle
+          v-for="([x, y, r], n, i) in PISCES_STARS"
+          :key="n" class="star" :cx="x" :cy="y" :r="r * 1.5"
+          :style="{ animationDelay: `${-(i * 1.7) % 9}s` }"
+        />
+        <g class="saturn" transform="translate(10 232) rotate(-18)">
+          <ellipse class="ring-back" rx="15" ry="3.8" />
+          <circle r="7.5" />
+          <path class="ring-front" d="M-15 0A15 3.8 0 0 0 15 0" />
         </g>
       </svg>
       <div
@@ -226,13 +226,18 @@ function dayLabel(d) {
   position: absolute; top: 0; bottom: 0; left: calc(100% * 5 / 7); width: calc(100% * 2 / 7);
   height: 100%; padding: 18px 10px; z-index: 1; pointer-events: none; overflow: visible;
 }
-.pisces polyline {
-  fill: none; stroke: var(--constellation); stroke-width: 1.2; stroke-opacity: .55;
-  stroke-linejoin: round; vector-effect: non-scaling-stroke;
+.pisces .star {
+  fill: var(--constellation); filter: drop-shadow(0 0 4px var(--constellation));
+  animation: star-glow 9s ease-in-out infinite;
 }
-.pisces > circle { fill: var(--constellation); filter: drop-shadow(0 0 3px var(--constellation)); }
-.pisces .saturn circle { fill: var(--constellation); opacity: .9; }
-.pisces .saturn ellipse { fill: none; stroke: var(--constellation); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+@keyframes star-glow { 50% { opacity: .55; } }
+/* Saturno: el anillo trasero pasa por detrás del planeta y el delantero por encima */
+.pisces .saturn { filter: drop-shadow(0 0 6px var(--constellation)); }
+.pisces .saturn circle { fill: var(--constellation); }
+.pisces .saturn .ring-back, .pisces .saturn .ring-front {
+  fill: none; stroke: var(--constellation); stroke-width: 1.6; vector-effect: non-scaling-stroke;
+}
+.pisces .saturn .ring-back { stroke-opacity: .5; }
 
 .cal-head { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
 .cal-head > span {
