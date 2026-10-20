@@ -93,6 +93,21 @@ function barStyle(s, w) {
 
 /** '09:00:00' → '9:00' */
 const hhmm = (t) => t.slice(0, 5).replace(/^0/, '');
+/* Piscis, donde está Saturno: posiciones reales (declinación hacia la derecha, ascensión recta
+   hacia abajo, ×10) para que la figura encaje vertical en la franja del sábado y el domingo.
+   r según el brillo: Alrescha (α), η y γ son las más brillantes. */
+const PISCES_STARS = {
+  gam: [33, 0, 3.2], s7: [54, 7, 1.8], the: [64, 27, 2.4], iot: [56, 57, 2.4], lam: [18, 62, 1.8], kap: [13, 24, 1.8],
+  ome: [69, 105, 2.6], del: [76, 229, 2.2], eps: [79, 264, 2.4], zet: [76, 291, 1.8], mu: [61, 333, 2],
+  nu: [55, 361, 2], xi: [32, 391, 2], alf: [28, 412, 3.2], omi: [92, 371, 2.4], eta: [154, 336, 3.4],
+  rho: [192, 323, 1.6], chi: [210, 286, 2], phi: [246, 291, 2.2], ups: [273, 306, 2.2], tau: [301, 286, 2.2],
+};
+const PISCES_LINES = [
+  ['gam', 's7', 'the', 'iot', 'lam', 'kap', 'gam'], // el pez del oeste (el «Circlet»)
+  ['iot', 'ome', 'del', 'eps', 'zet', 'mu', 'nu', 'xi', 'alf'], // cordón hasta el nudo, Alrescha
+  ['alf', 'omi', 'eta', 'rho', 'chi', 'phi', 'ups', 'tau'], // cordón y pez del norte
+].map((names) => names.map((n) => PISCES_STARS[n].slice(0, 2).join(',')).join(' '));
+
 /** En el móvil solo cabe el nombre de pila */
 const firstName = (name) => name.split(/\s+/)[0];
 
@@ -115,6 +130,16 @@ function dayLabel(d) {
           <span class="wd-long">{{ d }}</span><span class="wd-short" aria-hidden="true">{{ WEEKDAYS_SHORT[i] }}</span>
         </span>
       </div>
+      <div class="cal-body">
+      <!-- Piscis en el cielo del fin de semana, con Saturno al lado: decoración muy tenue -->
+      <svg class="pisces" viewBox="-30 -30 360 470" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <polyline v-for="(pts, i) in PISCES_LINES" :key="i" :points="pts" />
+        <circle v-for="([x, y, r], n) in PISCES_STARS" :key="n" :cx="x" :cy="y" :r="r" />
+        <g class="saturn" transform="translate(8 232) rotate(-18)">
+          <circle r="5" />
+          <ellipse rx="10" ry="2.6" />
+        </g>
+      </svg>
       <div
         v-for="w in weeks"
         :key="w.start"
@@ -179,6 +204,7 @@ function dayLabel(d) {
           <span class="type">&nbsp;· {{ s.ev.type_name }}</span>
         </button>
       </div>
+      </div>
     </div>
   </div>
 </template>
@@ -191,6 +217,21 @@ function dayLabel(d) {
   border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
   background: var(--weekday); box-shadow: var(--shadow);
 }
+
+/* Piscis: ocupa las dos últimas columnas (sábado y domingo) de todo el mes. z-index 1: por encima
+   de las celdas; las barras también tienen 1 pero van después en el DOM, así que quedan delante */
+.cal-body { position: relative; }
+.pisces {
+  position: absolute; top: 0; bottom: 0; left: calc(100% * 5 / 7); width: calc(100% * 2 / 7);
+  height: 100%; padding: 18px 10px; z-index: 1; pointer-events: none; overflow: visible;
+}
+.pisces polyline {
+  fill: none; stroke: var(--constellation); stroke-width: 1.2; stroke-opacity: .55;
+  stroke-linejoin: round; vector-effect: non-scaling-stroke;
+}
+.pisces > circle { fill: var(--constellation); filter: drop-shadow(0 0 3px var(--constellation)); }
+.pisces .saturn circle { fill: var(--constellation); opacity: .9; }
+.pisces .saturn ellipse { fill: none; stroke: var(--constellation); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
 
 .cal-head { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
 .cal-head > span {
@@ -222,8 +263,8 @@ function dayLabel(d) {
 .cal-day.holiday::before {
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: var(--holiday); opacity: var(--meteor-opacity, .32);
-  -webkit-mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 104'><defs><linearGradient id='t'><stop offset='0' stop-opacity='0'/><stop offset='1'/></linearGradient><filter id='b' x='-20%' y='-200%' width='140%' height='500%'><feGaussianBlur stdDeviation='1.1'/></filter><filter id='h'><feGaussianBlur stdDeviation='2.2'/></filter></defs><g transform='translate(150 60) rotate(28)'><rect x='-86' y='-.9' width='86' height='1.8' rx='.9' fill='url(%23t)' filter='url(%23b)'/><circle r='4.5' opacity='.5' filter='url(%23h)'/><circle r='1.6'/></g><g transform='translate(78 92) rotate(28)' opacity='.7'><rect x='-52' y='-.7' width='52' height='1.4' rx='.7' fill='url(%23t)' filter='url(%23b)'/><circle r='3.4' opacity='.5' filter='url(%23h)'/><circle r='1.2'/></g><g transform='translate(118 34) rotate(28)' opacity='.45'><rect x='-26' y='-.5' width='26' height='1' rx='.5' fill='url(%23t)' filter='url(%23b)'/><circle r='1'/></g></svg>") center / cover no-repeat;
-  mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 104'><defs><linearGradient id='t'><stop offset='0' stop-opacity='0'/><stop offset='1'/></linearGradient><filter id='b' x='-20%' y='-200%' width='140%' height='500%'><feGaussianBlur stdDeviation='1.1'/></filter><filter id='h'><feGaussianBlur stdDeviation='2.2'/></filter></defs><g transform='translate(150 60) rotate(28)'><rect x='-86' y='-.9' width='86' height='1.8' rx='.9' fill='url(%23t)' filter='url(%23b)'/><circle r='4.5' opacity='.5' filter='url(%23h)'/><circle r='1.6'/></g><g transform='translate(78 92) rotate(28)' opacity='.7'><rect x='-52' y='-.7' width='52' height='1.4' rx='.7' fill='url(%23t)' filter='url(%23b)'/><circle r='3.4' opacity='.5' filter='url(%23h)'/><circle r='1.2'/></g><g transform='translate(118 34) rotate(28)' opacity='.45'><rect x='-26' y='-.5' width='26' height='1' rx='.5' fill='url(%23t)' filter='url(%23b)'/><circle r='1'/></g></svg>") center / cover no-repeat;
+  -webkit-mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 104'><defs><linearGradient id='t'><stop offset='0' stop-opacity='0'/><stop offset='1'/></linearGradient><filter id='b' x='-20%' y='-200%' width='140%' height='500%'><feGaussianBlur stdDeviation='1.1'/></filter><filter id='h'><feGaussianBlur stdDeviation='2.2'/></filter></defs><g transform='translate(150 60) rotate(28)' opacity='1'><rect x='-86' y='-0.9' width='86' height='1.8' rx='0.9' fill='url(%23t)' filter='url(%23b)'/><circle r='4.5' opacity='.5' filter='url(%23h)'/><circle r='1.53'/></g><g transform='translate(78 92) rotate(28)' opacity='0.7'><rect x='-52' y='-0.7' width='52' height='1.4' rx='0.7' fill='url(%23t)' filter='url(%23b)'/><circle r='3.4' opacity='.5' filter='url(%23h)'/><circle r='1.19'/></g><g transform='translate(118 34) rotate(28)' opacity='0.45'><rect x='-26' y='-0.5' width='26' height='1' rx='0.5' fill='url(%23t)' filter='url(%23b)'/><circle r='0.85'/></g><g transform='translate(176 96) rotate(28)' opacity='0.55'><rect x='-60' y='-0.6' width='60' height='1.2' rx='0.6' fill='url(%23t)' filter='url(%23b)'/><circle r='3' opacity='.5' filter='url(%23h)'/><circle r='1.02'/></g><g transform='translate(40 58) rotate(28)' opacity='0.4'><rect x='-36' y='-0.5' width='36' height='1' rx='0.5' fill='url(%23t)' filter='url(%23b)'/><circle r='0.85'/></g><g transform='translate(104 72) rotate(28)' opacity='0.4'><rect x='-30' y='-0.45' width='30' height='0.9' rx='0.45' fill='url(%23t)' filter='url(%23b)'/><circle r='0.8'/></g><g transform='translate(176 30) rotate(28)' opacity='0.35'><rect x='-32' y='-0.45' width='32' height='0.9' rx='0.45' fill='url(%23t)' filter='url(%23b)'/><circle r='0.8'/></g><g transform='translate(30 100) rotate(28)' opacity='0.35'><rect x='-30' y='-0.45' width='30' height='0.9' rx='0.45' fill='url(%23t)' filter='url(%23b)'/><circle r='0.8'/></g><g transform='translate(134 104) rotate(28)' opacity='0.45'><rect x='-40' y='-0.5' width='40' height='1' rx='0.5' fill='url(%23t)' filter='url(%23b)'/><circle r='2.4' opacity='.5' filter='url(%23h)'/><circle r='0.85'/></g></svg>") center / cover no-repeat;
+  mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 104'><defs><linearGradient id='t'><stop offset='0' stop-opacity='0'/><stop offset='1'/></linearGradient><filter id='b' x='-20%' y='-200%' width='140%' height='500%'><feGaussianBlur stdDeviation='1.1'/></filter><filter id='h'><feGaussianBlur stdDeviation='2.2'/></filter></defs><g transform='translate(150 60) rotate(28)' opacity='1'><rect x='-86' y='-0.9' width='86' height='1.8' rx='0.9' fill='url(%23t)' filter='url(%23b)'/><circle r='4.5' opacity='.5' filter='url(%23h)'/><circle r='1.53'/></g><g transform='translate(78 92) rotate(28)' opacity='0.7'><rect x='-52' y='-0.7' width='52' height='1.4' rx='0.7' fill='url(%23t)' filter='url(%23b)'/><circle r='3.4' opacity='.5' filter='url(%23h)'/><circle r='1.19'/></g><g transform='translate(118 34) rotate(28)' opacity='0.45'><rect x='-26' y='-0.5' width='26' height='1' rx='0.5' fill='url(%23t)' filter='url(%23b)'/><circle r='0.85'/></g><g transform='translate(176 96) rotate(28)' opacity='0.55'><rect x='-60' y='-0.6' width='60' height='1.2' rx='0.6' fill='url(%23t)' filter='url(%23b)'/><circle r='3' opacity='.5' filter='url(%23h)'/><circle r='1.02'/></g><g transform='translate(40 58) rotate(28)' opacity='0.4'><rect x='-36' y='-0.5' width='36' height='1' rx='0.5' fill='url(%23t)' filter='url(%23b)'/><circle r='0.85'/></g><g transform='translate(104 72) rotate(28)' opacity='0.4'><rect x='-30' y='-0.45' width='30' height='0.9' rx='0.45' fill='url(%23t)' filter='url(%23b)'/><circle r='0.8'/></g><g transform='translate(176 30) rotate(28)' opacity='0.35'><rect x='-32' y='-0.45' width='32' height='0.9' rx='0.45' fill='url(%23t)' filter='url(%23b)'/><circle r='0.8'/></g><g transform='translate(30 100) rotate(28)' opacity='0.35'><rect x='-30' y='-0.45' width='30' height='0.9' rx='0.45' fill='url(%23t)' filter='url(%23b)'/><circle r='0.8'/></g><g transform='translate(134 104) rotate(28)' opacity='0.45'><rect x='-40' y='-0.5' width='40' height='1' rx='0.5' fill='url(%23t)' filter='url(%23b)'/><circle r='2.4' opacity='.5' filter='url(%23h)'/><circle r='0.85'/></g></svg>") center / cover no-repeat;
   transition: opacity .4s, transform .8s var(--ease-out);
 }
 .cal-day.holiday:hover::before { opacity: calc(var(--meteor-opacity, .32) + .15); transform: translate(3px, 1.5px); }
