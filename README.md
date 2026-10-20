@@ -1,5 +1,7 @@
 # Saturno
 
+![Saturno](docs/miniatura.png)
+
 Gestión de ausencias. Se llama como el dios romano del tiempo.
 
 Vacaciones, asuntos propios, visitas médicas y teletrabajo con un calendario visual por sección.
