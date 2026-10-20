@@ -1,0 +1,14 @@
+node_modules/
+client/dist/
+.vercel
+.env
+.env*
+!.env.example
+# Contiene contraseñas de los usuarios de prueba: solo en local
+server/scripts/usuarios-prueba.js
+# Credenciales generadas para el despliegue: solo en local
+credenciales*.txt
+# Ayudas para agentes instaladas por las integraciones: solo en local
+.agents/
+.claude/
+skills-lock.json

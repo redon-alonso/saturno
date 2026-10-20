@@ -1,0 +1,12 @@
+# Lo que nunca debe salir del ordenador en un `vercel deploy` manual
+.env
+.env*
+!.env.example
+credenciales*.txt
+server/scripts/usuarios-prueba.js
+node_modules
+client/dist
+.agents
+.claude
+skills-lock.json
+docker-compose.yml
