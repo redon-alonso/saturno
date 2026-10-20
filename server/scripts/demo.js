@@ -2,8 +2,9 @@
 import bcrypt from 'bcryptjs';
 import { pool, migrate, one, q, isProduction } from '../src/db.js';
 
-if (isProduction || /neon\.tech/.test(process.env.DATABASE_URL ?? '')) {
-  console.error('Los datos de demostración no se cargan en producción.');
+// En producción solo con permiso explícito (p. ej. una web de demostración): DEMO_EN_PRODUCCION=si
+if ((isProduction || /neon\.tech/.test(process.env.DATABASE_URL ?? '')) && process.env.DEMO_EN_PRODUCCION !== 'si') {
+  console.error('Los datos de demostración no se cargan en producción (usa DEMO_EN_PRODUCCION=si si es una demo).');
   process.exit(1);
 }
 import { addDays, countDays, todayStr } from '../../shared/dates.js';
