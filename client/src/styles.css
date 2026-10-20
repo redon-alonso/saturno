@@ -44,6 +44,7 @@
   --star: rgb(120 100 210 / 45%);
   --glint: rgb(155 108 242 / 22%);
   --constellation: rgb(91 87 217 / 50%);
+  --saturn: #8f6cf0;
 
   --radius: 16px;
   --radius-sm: 10px;
@@ -89,6 +90,7 @@
     --star: rgb(255 244 251 / 85%);
     --glint: rgb(177 140 248 / 28%);
     --constellation: rgb(230 220 255 / 62%);
+    --saturn: #fff0d4;
 
     --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 10px 30px -10px rgb(0 0 0 / 55%);
     --shadow-lg: 0 30px 80px -20px rgb(0 0 0 / 70%);

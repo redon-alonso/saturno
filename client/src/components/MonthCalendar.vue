@@ -135,11 +135,8 @@ function dayLabel(d) {
           :key="n" class="star" :cx="x" :cy="y" :r="r * 1.5"
           :style="{ animationDelay: `${-(i * 1.7) % 9}s` }"
         />
-        <g class="saturn" transform="translate(10 232) rotate(-18)">
-          <ellipse class="ring-back" rx="15" ry="3.8" />
-          <circle r="7.5" />
-          <path class="ring-front" d="M-15 0A15 3.8 0 0 0 15 0" />
-        </g>
+        <!-- Saturno, como se ve a simple vista: un punto que brilla más que las estrellas y no titila -->
+        <circle class="saturn" cx="10" cy="232" r="3.6" />
       </svg>
       <div
         v-for="w in weeks"
@@ -227,17 +224,14 @@ function dayLabel(d) {
   height: 100%; padding: 18px 10px; z-index: 1; pointer-events: none; overflow: visible;
 }
 .pisces .star {
-  fill: var(--constellation); filter: drop-shadow(0 0 4px var(--constellation));
+  fill: var(--constellation); opacity: .5; filter: drop-shadow(0 0 3px var(--constellation));
   animation: star-glow 9s ease-in-out infinite;
 }
-@keyframes star-glow { 50% { opacity: .55; } }
-/* Saturno: el anillo trasero pasa por detrás del planeta y el delantero por encima */
-.pisces .saturn { filter: drop-shadow(0 0 6px var(--constellation)); }
-.pisces .saturn circle { fill: var(--constellation); }
-.pisces .saturn .ring-back, .pisces .saturn .ring-front {
-  fill: none; stroke: var(--constellation); stroke-width: 1.6; vector-effect: non-scaling-stroke;
+@keyframes star-glow { 50% { opacity: .25; } }
+.pisces .saturn {
+  fill: var(--saturn);
+  filter: drop-shadow(0 0 3px var(--saturn)) drop-shadow(0 0 9px var(--saturn));
 }
-.pisces .saturn .ring-back { stroke-opacity: .5; }
 
 .cal-head { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
 .cal-head > span {
