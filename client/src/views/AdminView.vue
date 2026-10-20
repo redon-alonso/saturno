@@ -14,6 +14,11 @@ const notice = ref('');
 const users = ref([]);
 const editing = ref(null);       // usuario en edición (copia)
 const balanceOf = ref(null);     // { user, data }
+// En el móvil las tablas solo muestran el nombre: al pulsarlo se abre una ficha con el resto
+const viewingUser = ref(null);
+const viewingSection = ref(null);
+const viewingHoliday = ref(null);
+const openType = ref(null);      // tipo desplegado en el móvil (índice)
 const adjustment = ref({ days: '', reason: '' });
 
 async function loadUsers() { users.value = await api('/users'); }
@@ -54,6 +59,10 @@ const openBalance = (u) => run(async () => {
   balanceOf.value = { user: u, data: await api(`/users/${u.id}/balance`) };
 });
 
+/** Desde la ficha del móvil: se cierra y se abre la acción */
+function sheetEdit() { const u = viewingUser.value; viewingUser.value = null; editUser(u); }
+function sheetBalance() { const u = viewingUser.value; viewingUser.value = null; openBalance(u); }
+
 const saveAdjustment = () => run(async () => {
   const u = balanceOf.value.user;
   await api(`/users/${u.id}/adjustments`, { method: 'POST', body: adjustment.value });
@@ -92,7 +101,12 @@ const sectionTree = computed(() => {
   return out;
 });const deleteSection = (s) => run(async () => {
   await api(`/sections/${s.id}`, { method: 'DELETE' });
+  viewingSection.value = null;
   await loadSections();
+});
+/** La ficha del móvil se rehace desde el árbol al recargar, para mostrar lo guardado */
+watch(sectionTree, (tree) => {
+  if (viewingSection.value) viewingSection.value = tree.find((x) => x.id === viewingSection.value.id) ?? null;
 });
 
 // ---------- Tipos ----------
@@ -123,6 +137,7 @@ const addHoliday = () => run(async () => {
 });
 const deleteHoliday = (h) => run(async () => {
   await api(`/holidays/${h.date}`, { method: 'DELETE' });
+  viewingHoliday.value = null;
   await refreshHolidays();
 });
 const suggest = () => run(async () => {
@@ -158,15 +173,20 @@ const importSelected = () => run(async () => {
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Sección</th><th>Alta</th><th /></tr></thead>
+          <thead class="d-only"><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Sección</th><th>Alta</th><th /></tr></thead>
           <tbody>
             <tr v-for="u in users" :key="u.id" :class="{ inactive: !u.active }">
-              <td>{{ u.name }}<span v-if="!u.active" class="badge">inactivo</span></td>
-              <td class="small">{{ u.email }}</td>
-              <td>{{ ROLE_LABELS[u.role] }}</td>
-              <td>{{ u.section_name ?? '—' }}</td>
-              <td class="small">{{ dmy(u.hire_date) }}<div v-if="u.termination_date" class="muted">baja {{ dmy(u.termination_date) }}</div></td>
-              <td class="num row-actions">
+              <td class="m-only">
+                <button class="m-row" @click="viewingUser = u">
+                  {{ u.name }}<span v-if="!u.active" class="badge">inactivo</span><span class="chev" aria-hidden="true">›</span>
+                </button>
+              </td>
+              <td class="d-only">{{ u.name }}<span v-if="!u.active" class="badge">inactivo</span></td>
+              <td class="d-only small">{{ u.email }}</td>
+              <td class="d-only">{{ ROLE_LABELS[u.role] }}</td>
+              <td class="d-only">{{ u.section_name ?? '—' }}</td>
+              <td class="d-only small">{{ dmy(u.hire_date) }}<div v-if="u.termination_date" class="muted">baja {{ dmy(u.termination_date) }}</div></td>
+              <td class="d-only num row-actions">
                 <button class="btn small" @click="openBalance(u)">Saldo</button>
                 <button class="btn small" @click="editUser(u)">Editar</button>
               </td>
@@ -188,16 +208,22 @@ const importSelected = () => run(async () => {
       </p>
       <div class="table-wrap">
       <table>
-        <thead><tr><th>Nombre</th><th>Depende de</th><th class="num">Personas</th><th /></tr></thead>
+        <thead class="d-only"><tr><th>Nombre</th><th>Depende de</th><th class="num">Personas</th><th /></tr></thead>
         <tbody>
           <tr v-for="s in sectionTree" :key="s.id">
-            <td>
+            <td class="m-only">
+              <button class="m-row" :style="{ '--depth': s.depth }" @click="viewingSection = s">
+                <span class="m-tree"><span v-if="s.depth" class="tree-branch" aria-hidden="true">└ </span>{{ s.name }}</span>
+                <span class="muted small">{{ s.members }}</span><span class="chev" aria-hidden="true">›</span>
+              </button>
+            </td>
+            <td class="d-only">
               <div class="tree-name" :style="{ '--depth': s.depth }">
                 <span v-if="s.depth" class="tree-branch" aria-hidden="true">└</span>
                 <input :value="s.name" aria-label="Nombre de la sección" @change="updateSection(s, { name: $event.target.value })" />
               </div>
             </td>
-            <td>
+            <td class="d-only">
               <select
                 :value="s.parent_id ?? ''"
                 :aria-label="`Sección de la que depende ${s.name}`"
@@ -207,8 +233,8 @@ const importSelected = () => run(async () => {
                 <option v-for="p in session.sections.filter((x) => x.id !== s.id)" :key="p.id" :value="p.id">{{ p.name }}</option>
               </select>
             </td>
-            <td class="num">{{ s.members }}</td>
-            <td class="num"><button class="btn small danger" :disabled="s.members > 0" :title="s.members ? 'Tiene personas asignadas' : ''" @click="deleteSection(s)">Eliminar</button></td>
+            <td class="d-only num">{{ s.members }}</td>
+            <td class="d-only num"><button class="btn small danger" :disabled="s.members > 0" :title="s.members ? 'Tiene personas asignadas' : ''" @click="deleteSection(s)">Eliminar</button></td>
           </tr>
         </tbody>
       </table>
@@ -221,13 +247,20 @@ const importSelected = () => run(async () => {
         «Descuenta vacaciones» resta del saldo acumulable. «Cupo por ciclo» es un máximo por ciclo (sep–ago) que no se acumula.
         «Cuenta como ausencia» decide si suma en el contador del cuadrante.
       </p>
-      <form v-for="(t, i) in session.types" :key="t.id ?? `new-${i}`" class="card type-card" @submit.prevent="saveType(t)">
+      <form
+        v-for="(t, i) in session.types" :key="t.id ?? `new-${i}`"
+        class="card type-card" :class="{ open: openType === i || !t.id }" @submit.prevent="saveType(t)"
+      >
+        <button type="button" class="m-row m-only-block type-toggle" :aria-expanded="openType === i" @click="openType = openType === i ? null : i">
+          <span class="dot" :style="{ '--c': t.color }" />{{ t.name || 'Nuevo tipo' }}
+          <span v-if="!t.active" class="badge">inactivo</span><span class="chev" aria-hidden="true">›</span>
+        </button>
         <div class="type-head">
           <input v-model="t.color" type="color" aria-label="Color" />
           <input v-model="t.name" placeholder="Nombre" required aria-label="Nombre" />
           <span class="preview" :style="{ '--c': t.color }">Ana · {{ t.name || 'Ejemplo' }}</span>
         </div>
-        <div class="grid-2">
+        <div class="grid-2 type-body">
           <label class="field">Cómputo
             <select v-model="t.count_mode">
               <option value="natural">Días naturales</option>
@@ -238,7 +271,7 @@ const importSelected = () => run(async () => {
             <input v-model="t.annual_quota" type="number" min="0" step="0.5" />
           </label>
         </div>
-        <div class="row checks">
+        <div class="row checks type-body">
           <label class="check"><input v-model="t.deducts_vacation" type="checkbox" /> Descuenta vacaciones</label>
           <label class="check"><input v-model="t.is_absence" type="checkbox" /> Cuenta como ausencia</label>
           <label class="check"><input v-model="t.allows_hours" type="checkbox" /> Permite horas</label>
@@ -270,13 +303,18 @@ const importSelected = () => run(async () => {
       <p v-if="!yearHolidays.length" class="notice warn">No hay festivos definidos para {{ year }}.</p>
       <div v-else class="table-wrap">
         <table>
-          <thead><tr><th>Fecha</th><th>Festivo</th><th>Ámbito</th><th /></tr></thead>
+          <thead class="d-only"><tr><th>Fecha</th><th>Festivo</th><th>Ámbito</th><th /></tr></thead>
           <tbody>
             <tr v-for="h in yearHolidays" :key="h.date">
-              <td>{{ dmy(h.date) }}</td>
-              <td>{{ h.name }}</td>
-              <td class="muted">{{ SCOPE_LABELS[h.scope] }}</td>
-              <td class="num"><button class="btn small danger" @click="deleteHoliday(h)">Quitar</button></td>
+              <td class="m-only">
+                <button class="m-row" @click="viewingHoliday = h">
+                  <span class="m-date">{{ dmy(h.date).slice(0, 5) }}</span>{{ h.name }}<span class="chev" aria-hidden="true">›</span>
+                </button>
+              </td>
+              <td class="d-only">{{ dmy(h.date) }}</td>
+              <td class="d-only">{{ h.name }}</td>
+              <td class="d-only muted">{{ SCOPE_LABELS[h.scope] }}</td>
+              <td class="d-only num"><button class="btn small danger" @click="deleteHoliday(h)">Quitar</button></td>
             </tr>
           </tbody>
         </table>
@@ -365,6 +403,57 @@ const importSelected = () => run(async () => {
       </form>
     </AppDialog>
 
+    <!-- Fichas del móvil -->
+    <AppDialog :open="!!viewingUser" :title="viewingUser?.name ?? ''" @close="viewingUser = null">
+      <div v-if="viewingUser" class="stack">
+        <dl class="sheet">
+          <dt>Correo</dt><dd>{{ viewingUser.email }}</dd>
+          <dt>Rol</dt><dd>{{ ROLE_LABELS[viewingUser.role] }}</dd>
+          <dt>Sección</dt><dd>{{ viewingUser.section_name ?? '—' }}</dd>
+          <dt>Alta</dt><dd>{{ dmy(viewingUser.hire_date) }}</dd>
+          <template v-if="viewingUser.termination_date"><dt>Baja</dt><dd>{{ dmy(viewingUser.termination_date) }}</dd></template>
+          <dt>Estado</dt><dd>{{ viewingUser.active ? 'Activo' : 'Inactivo' }}</dd>
+        </dl>
+        <div class="row">
+          <span class="spacer" />
+          <button class="btn" @click="sheetBalance">Saldo</button>
+          <button class="btn primary" @click="sheetEdit">Editar</button>
+        </div>
+      </div>
+    </AppDialog>
+
+    <AppDialog :open="!!viewingSection" :title="viewingSection?.name ?? ''" @close="viewingSection = null">
+      <div v-if="viewingSection" class="stack">
+        <label class="field">Nombre
+          <input :value="viewingSection.name" @change="updateSection(viewingSection, { name: $event.target.value })" />
+        </label>
+        <label class="field">Depende de
+          <select
+            :value="viewingSection.parent_id ?? ''"
+            @change="updateSection(viewingSection, { parent_id: $event.target.value ? Number($event.target.value) : null })"
+          >
+            <option value="">— Ninguna (nivel superior)</option>
+            <option v-for="p in session.sections.filter((x) => x.id !== viewingSection.id)" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+        </label>
+        <p class="muted small">{{ viewingSection.members }} {{ viewingSection.members === 1 ? 'persona' : 'personas' }} en esta sección.</p>
+        <div class="row">
+          <span class="spacer" />
+          <button class="btn danger" :disabled="viewingSection.members > 0" @click="deleteSection(viewingSection)">Eliminar</button>
+        </div>
+      </div>
+    </AppDialog>
+
+    <AppDialog :open="!!viewingHoliday" :title="viewingHoliday?.name ?? ''" @close="viewingHoliday = null">
+      <div v-if="viewingHoliday" class="stack">
+        <dl class="sheet">
+          <dt>Fecha</dt><dd>{{ dmy(viewingHoliday.date) }}</dd>
+          <dt>Ámbito</dt><dd>{{ SCOPE_LABELS[viewingHoliday.scope] }}</dd>
+        </dl>
+        <div class="row"><span class="spacer" /><button class="btn danger" @click="deleteHoliday(viewingHoliday)">Quitar</button></div>
+      </div>
+    </AppDialog>
+
     <!-- Diálogo saldo -->
     <AppDialog :open="!!balanceOf" :title="`Saldo de ${balanceOf?.user.name ?? ''}`" @close="balanceOf = null">
       <div v-if="balanceOf" class="stack">
@@ -417,4 +506,31 @@ tr.inactive td { opacity: .55; }
 .holiday-form { display: grid; grid-template-columns: 160px 1fr 190px auto; gap: 8px; }
 @media (max-width: 720px) { .holiday-form { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .type-head { grid-template-columns: 52px 1fr; } .preview { grid-column: 1 / -1; } }
+
+/* ---- Móvil: listas con solo el nombre; el detalle va en una ficha o se despliega ---- */
+.m-row {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 12px 4px; border: 0; background: none;
+  font: inherit; font-weight: 600; color: var(--text); text-align: left; cursor: pointer;
+}
+/* Detrás de .m-row: con el mismo peso gana la última regla, y en escritorio tienen que ocultarse */
+.m-only, .m-only-block { display: none; }
+.m-row .chev { margin-left: auto; font-size: 1.3rem; line-height: 1; color: var(--muted); transition: transform .25s var(--ease-out); }
+.m-row .muted { margin-left: auto; }
+.m-row .muted + .chev { margin-left: 4px; }
+.m-tree { padding-left: calc(var(--depth) * 16px); }
+.m-date { min-width: 46px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; }
+.sheet { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
+.sheet dt { color: var(--muted); font-size: .85rem; font-weight: 600; }
+.sheet dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .d-only { display: none; }
+  td.m-only { display: table-cell; padding: 0 8px; }
+  .m-only-block { display: flex; }
+  /* Tipos: plegados; al pulsar se despliegan con su formulario */
+  .type-card { padding: 4px 16px; gap: 0; }
+  .type-card:not(.open) .type-head, .type-card:not(.open) .type-body { display: none; }
+  .type-card.open { padding-bottom: 16px; gap: 12px; }
+  .type-card.open .chev { transform: rotate(90deg); }
+  .type-toggle .dot { margin-right: 2px; }
+}
 </style>
