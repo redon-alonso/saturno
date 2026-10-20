@@ -40,7 +40,7 @@ async function submit() {
     </div>
     <form class="panel stack" :class="{ shake: error }" @submit.prevent="submit">
       <div class="brand">
-        <BrandMark :size="52" />
+        <BrandMark :size="42" />
         <div>
           <h1>Saturno</h1>
           <p class="muted">Vacaciones, permisos y teletrabajo</p>
@@ -99,7 +99,7 @@ async function submit() {
 @keyframes orbit { to { transform: translate(-50%, -50%) rotateX(72deg) rotateZ(360deg); } }
 
 .planet {
-  position: absolute; width: min(440px, 60vw); right: max(-60px, 4vw); top: 6vh;
+  position: absolute; width: min(480px, 62vw); right: max(-60px, 3vw); top: 10vh;
   filter: drop-shadow(0 0 70px rgb(177 140 248 / 55%));
   animation: float 16s ease-in-out infinite alternate;
 }

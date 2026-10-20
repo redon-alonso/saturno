@@ -3,11 +3,16 @@ defineProps({ size: { type: Number, default: 32 } });
 </script>
 
 <template>
-  <!-- Saturno con sus anillos: el mismo dibujo que el favicon (public/saturno.svg) -->
-  <img src="/saturno.svg" :width="size" :height="size" class="mark" alt="" />
+  <!-- El planeta suelto, sin el recuadro del favicon, para que flote sobre la cabecera -->
+  <img src="/planeta.svg" :width="Math.round(size * 52 / 28)" :height="size" class="mark" alt="" />
 </template>
 
 <style scoped>
-.mark { flex: none; filter: drop-shadow(0 4px 12px rgb(131 128 245 / 50%)); transition: transform .6s var(--ease-out); }
-.mark:hover { transform: rotate(-12deg) scale(1.08); }
+.mark {
+  flex: none; object-fit: contain; overflow: visible;
+  filter: drop-shadow(0 0 1px color-mix(in srgb, var(--primary) 70%, transparent))
+          drop-shadow(0 2px 10px color-mix(in srgb, var(--primary-2) 55%, transparent));
+  transition: transform .6s var(--ease-out);
+}
+.mark:hover { transform: rotate(-10deg) scale(1.08); }
 </style>
