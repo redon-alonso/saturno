@@ -13,6 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['day-click', 'event-click']);
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const WEEKDAYS_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D']; // en el móvil
 const today = todayStr();
 
 /** Persona bajo el ratón: se resaltan todas sus ausencias y se atenúa el resto. */
@@ -92,6 +93,8 @@ function barStyle(s, w) {
 
 /** '09:00:00' → '9:00' */
 const hhmm = (t) => t.slice(0, 5).replace(/^0/, '');
+/** En el móvil solo cabe el nombre de pila */
+const firstName = (name) => name.split(/\s+/)[0];
 
 const barTitle = (e) => `${e.user_name} · ${e.type_name}\n${range(e)}\n${STATUS_LABELS[e.status]}`;
 
@@ -108,14 +111,16 @@ function dayLabel(d) {
   <div class="cal-scroll">
     <div class="cal" :class="{ focusing: focusUser != null }" role="grid">
       <div class="cal-head" role="row">
-        <span v-for="(d, i) in WEEKDAYS" :key="d" role="columnheader" :class="{ weekend: i >= 5 }">{{ d }}</span>
+        <span v-for="(d, i) in WEEKDAYS" :key="d" role="columnheader" :class="{ weekend: i >= 5 }" :aria-label="d">
+          <span class="wd-long">{{ d }}</span><span class="wd-short" aria-hidden="true">{{ WEEKDAYS_SHORT[i] }}</span>
+        </span>
       </div>
       <div
         v-for="w in weeks"
         :key="w.start"
         class="cal-week"
         role="row"
-        :style="{ gridTemplateRows: `34px repeat(${w.lanes}, 26px) minmax(14px, 1fr)` }"
+        :style="{ gridTemplateRows: `var(--row-top) repeat(${w.lanes}, var(--row-lane)) minmax(var(--row-foot), 1fr)` }"
       >
         <button
           v-for="(d, i) in w.days"
@@ -131,7 +136,7 @@ function dayLabel(d) {
         >
           <span class="day-top">
             <span class="num">{{ d.day }}</span>
-            <span v-if="d.holiday" class="holiday-name">✦ {{ d.holiday }}</span>
+            <span v-if="d.holiday" class="holiday-name">✦<span class="holiday-text">{{ d.holiday }}</span></span>
             <span
               v-if="d.out || d.pending"
               class="count"
@@ -170,6 +175,7 @@ function dayLabel(d) {
         >
           <span v-if="s.ev.start_time" class="hours">◷ {{ hhmm(s.ev.start_time) }}–{{ hhmm(s.ev.end_time) }}</span>
           <span class="name">{{ s.ev.user_name }}</span>
+          <span class="name-short">{{ firstName(s.ev.user_name) }}</span>
           <span class="type">&nbsp;· {{ s.ev.type_name }}</span>
         </button>
       </div>
@@ -180,16 +186,18 @@ function dayLabel(d) {
 <style scoped>
 .cal-scroll { overflow-x: auto; border-radius: var(--radius); }
 .cal {
-  min-width: 660px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  /* Alto de las filas de cada semana: cabecera del día, cada carril de barras y pie (medidor) */
+  --row-top: 34px; --row-lane: 26px; --row-foot: 14px;
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
   background: var(--weekday); box-shadow: var(--shadow);
 }
 
 .cal-head { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
-.cal-head span {
+.cal-head > span {
   padding: 10px 12px; font-size: .72rem; font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; color: var(--muted); background: var(--surface-2);
 }
-.cal-head span.weekend { background: color-mix(in srgb, var(--weekend) 70%, var(--surface-2)); color: var(--weekend-num); }
+.cal-head > span.weekend { background: color-mix(in srgb, var(--weekend) 70%, var(--surface-2)); color: var(--weekend-num); }
 
 .cal-week {
   display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -241,6 +249,7 @@ function dayLabel(d) {
 }
 @keyframes breathe { 50% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--primary) 15%, transparent); } }
 
+.holiday-text { margin-left: .3em; }
 .holiday-name {
   font-size: .68rem; font-weight: 700; color: var(--holiday);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
@@ -333,4 +342,28 @@ function dayLabel(d) {
 .cal.focusing .bar:not(.lit) { opacity: .28; filter: saturate(.4); }
 
 @media (max-width: 900px) { .bar .type { display: none; } }
+
+.wd-short, .name-short { display: none; }
+
+/* Móvil: el mes entero cabe a lo ancho, sin desplazamiento lateral */
+@media (max-width: 640px) {
+  .cal { --row-top: 28px; --row-lane: 19px; --row-foot: 10px; }
+  .cal-head > span { padding: 7px 0; text-align: center; letter-spacing: 0; }
+  .wd-long { display: none; }
+  .wd-short { display: inline; }
+  .cal-week { min-height: 68px; row-gap: 3px; }
+  .cal-day { padding: 4px 0 0; align-items: center; }
+  .day-top { justify-content: center; height: 20px; }
+  .num { font-size: .8rem; }
+  .cal-day.today .num { min-width: 22px; height: 22px; padding: 0 4px; border-radius: 7px; }
+  /* El nombre del festivo y el contador no caben: quedan en el aviso al pulsar y en la barrita */
+  .holiday-text, .count { display: none; }
+  .day-top { gap: 2px; }
+  .load { left: 4px; right: 4px; bottom: 4px; height: 3px; }
+  .bar { margin: 0 2px; padding: 0 4px; border-radius: 5px; font-size: .64rem; }
+  .bar.cont-left { margin-left: 0; }
+  .bar.cont-right { margin-right: 0; }
+  .bar .name, .bar .hours { display: none; }
+  .bar .name-short { display: inline; }
+}
 </style>
