@@ -86,7 +86,11 @@ function exit() {
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
 }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
-.brand-name { font-family: var(--font-display); font-weight: 750; font-size: 1.15rem; letter-spacing: -.02em; }
+.brand-name {
+  font-family: var(--font-mystic); font-weight: 700; font-size: 1.2rem; letter-spacing: .08em;
+  background: linear-gradient(110deg, var(--primary), var(--primary-2) 60%, #e5676c);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
 
 nav { display: flex; gap: 2px; flex-wrap: wrap; }
 nav a {

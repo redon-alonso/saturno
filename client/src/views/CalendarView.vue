@@ -221,7 +221,7 @@ async function onDecided() {
 .title-block { display: grid; gap: 6px; }
 .month-nav { display: flex; align-items: center; gap: 8px; }
 .month {
-  margin: 0 6px; min-width: 250px; font-size: 2.1rem; font-weight: 750; overflow: hidden;
+  margin: 0 6px; min-width: 310px; font-size: 2rem; font-weight: 600; overflow: hidden;
 }
 .month > span {
   display: inline-block; padding-bottom: .08em;

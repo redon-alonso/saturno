@@ -1,6 +1,6 @@
 import { reactive } from 'vue';
 
-const TOKEN_KEY = 'ausencias.token';
+const TOKEN_KEY = 'saturno.token';
 
 function readToken() {
   try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }

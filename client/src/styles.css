@@ -1,12 +1,15 @@
 @import '@fontsource-variable/plus-jakarta-sans';
 @import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/cinzel';
 
 /* ============ Tokens ============ */
 :root {
   --font: 'Plus Jakarta Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Bricolage Grotesque Variable', var(--font);
+  /* Letras de inscripción romana para el nombre y los títulos de página */
+  --font-mystic: 'Cinzel Variable', 'Palatino Linotype', Georgia, serif;
 
-  --bg: #f4f3fa;
+  --bg: #f3f1fb;
   --surface: #ffffff;
   --surface-2: #f7f6fc;
   --surface-3: #efedf8;
@@ -37,6 +40,9 @@
   --aurora-1: rgb(155 108 242 / 18%);
   --aurora-2: rgb(91 87 217 / 14%);
   --aurora-3: rgb(229 103 108 / 10%);
+  /* Estrellas del fondo y brillo de los bordes */
+  --star: rgb(120 100 210 / 45%);
+  --glint: rgb(155 108 242 / 22%);
 
   --radius: 16px;
   --radius-sm: 10px;
@@ -51,12 +57,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d0c15;
-    --surface: #15141f;
-    --surface-2: #1b1a27;
-    --surface-3: #232132;
-    --border: #282638;
-    --border-strong: #363349;
+    --bg: #0b0918;
+    --surface: #14112a;
+    --surface-2: #1a1733;
+    --surface-3: #231f40;
+    --border: #2a2549;
+    --border-strong: #3a335f;
     --text: #ecebf6;
     --muted: #9896b0;
     --primary: #8380f5;
@@ -68,8 +74,8 @@
     --warning: #f0b45a;
 
     /* En oscuro los fines de semana son más claros que los laborables */
-    --weekday: #15141f;
-    --weekend: #201f2d;
+    --weekday: #14112a;
+    --weekend: #1f1b3a;
     --weekend-num: #7d7b95;
     --holiday: #c995ea;
     /* Sobre fondo muy oscuro hace falta más tinte para que el color no se vuelva terroso */
@@ -79,6 +85,8 @@
     --aurora-1: rgb(155 108 242 / 16%);
     --aurora-2: rgb(91 87 217 / 14%);
     --aurora-3: rgb(229 103 108 / 7%);
+    --star: rgb(255 244 251 / 85%);
+    --glint: rgb(177 140 248 / 28%);
 
     --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 10px 30px -10px rgb(0 0 0 / 55%);
     --shadow-lg: 0 30px 80px -20px rgb(0 0 0 / 70%);
@@ -104,8 +112,39 @@ body::before {
   to { transform: translate3d(3vmax, -2vmax, 0) rotate(4deg) scale(1.05); }
 }
 
+/* Cielo estrellado: dos capas de puntos en mosaicos de tamaño distinto (no se nota la repetición)
+   que titilan desfasadas */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    radial-gradient(1.4px 1.4px at 23px 41px, var(--star), transparent),
+    radial-gradient(1px 1px at 131px 87px, var(--star), transparent),
+    radial-gradient(1.2px 1.2px at 197px 173px, var(--star), transparent),
+    radial-gradient(1px 1px at 61px 211px, var(--star), transparent),
+    radial-gradient(1.8px 1.8px at 271px 29px, var(--star), transparent),
+    radial-gradient(1px 1px at 311px 239px, var(--star), transparent),
+    radial-gradient(1.2px 1.2px at 83px 293px, var(--star), transparent),
+    radial-gradient(1px 1px at 233px 307px, var(--star), transparent);
+  background-size: 337px 331px;
+  animation: twinkle 7s ease-in-out infinite alternate;
+}
+body > #app::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 47px 113px, var(--star), transparent),
+    radial-gradient(1.6px 1.6px at 173px 37px, var(--star), transparent),
+    radial-gradient(1px 1px at 389px 151px, var(--star), transparent),
+    radial-gradient(1.3px 1.3px at 263px 389px, var(--star), transparent),
+    radial-gradient(1px 1px at 431px 331px, var(--star), transparent),
+    radial-gradient(2px 2px at 97px 431px, var(--star), transparent);
+  background-size: 479px 467px;
+  animation: twinkle 11s ease-in-out -4s infinite alternate-reverse;
+}
+@keyframes twinkle { from { opacity: .35; } to { opacity: 1; } }
+
 h1, h2, h3 { margin: 0 0 .5em; line-height: 1.15; font-family: var(--font-display); letter-spacing: -.02em; }
 h1 { font-size: 1.7rem; font-weight: 700; }
+.page h1 { font-family: var(--font-mystic); font-weight: 600; letter-spacing: .04em; }
 h2 { font-size: 1.15rem; font-weight: 650; }
 h3 { font-size: 1rem; font-weight: 650; }
 a { color: var(--primary); }
@@ -115,7 +154,7 @@ a { color: var(--primary); }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glint);
   padding: 20px;
 }
 
