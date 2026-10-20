@@ -24,8 +24,6 @@ const ratio = computed(() => {
   const v = vacation.value;
   return v && v.total > 0 ? Math.max(0, Math.min(1, v.available / v.total)) : 0;
 });
-const initials = computed(() =>
-  (session.user?.name ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase());
 
 function exit() {
   logout();
@@ -56,11 +54,8 @@ function exit() {
         <span><b>{{ num(vacation.available) }}</b> días libres</span>
       </RouterLink>
       <span class="who">
-        <span class="avatar" aria-hidden="true">{{ initials }}</span>
-        <span class="who-text">
-          {{ session.user.name }}
-          <small>{{ ROLE_LABELS[session.user.role] }}</small>
-        </span>
+        {{ session.user.name }}
+        <small>{{ ROLE_LABELS[session.user.role] }}</small>
       </span>
       <button class="btn small" @click="exit">Salir</button>
     </div>
@@ -124,13 +119,10 @@ nav a.router-link-active::after {
   -webkit-mask: radial-gradient(circle, transparent 6px, #000 7px); mask: radial-gradient(circle, transparent 6px, #000 7px);
 }
 
-.who { display: flex; align-items: center; gap: 9px; }
-.avatar {
-  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; flex: none;
-  font-size: .78rem; font-weight: 800; color: #fff;
-  background: linear-gradient(135deg, var(--primary-2), var(--primary));
+.who { display: grid; font-size: .88rem; font-weight: 600; line-height: 1.2; text-align: right; min-width: 0; }
+.who small { color: var(--muted); font-weight: 500; }
+@media (max-width: 760px) {
+  .who { max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who small { display: none; }
 }
-.who-text { display: grid; font-size: .88rem; font-weight: 600; line-height: 1.2; }
-.who-text small { color: var(--muted); font-weight: 500; }
-@media (max-width: 760px) { .who-text { display: none; } }
 </style>
