@@ -158,14 +158,14 @@ nav a.router-link-active::after {
 
 .who { display: grid; font-size: .88rem; font-weight: 600; line-height: 1.2; text-align: right; min-width: 0; }
 .who small { color: var(--muted); font-weight: 500; }
-@media (max-width: 760px) {
+@media (max-width: 760px), (orientation: landscape) and (max-height: 500px) {
   .who { max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .who small { display: none; }
 }
 
 /* ---- Móvil: logo, usuario y «Salir» en una fila; secciones y saldo en un desplegable ---- */
 .menu-btn, .mobile-menu, .mm-backdrop { display: none; }
-@media (max-width: 760px) {
+@media (max-width: 760px), (orientation: landscape) and (max-height: 500px) {
   .topbar-inner { flex-wrap: nowrap; gap: 10px; padding: 8px 12px; }
   .topbar-inner > nav, .topbar-inner > .balance-chip { display: none; }
   .menu-btn { display: inline-grid; place-items: center; flex: none; }
