@@ -64,10 +64,12 @@ const preview = computed(() => {
 
 const saveUser = () => run(async () => {
   const u = editing.value;
-  if (u.id) await api(`/users/${u.id}`, { method: 'PUT', body: u });
-  else await api('/users', { method: 'POST', body: u });
+  const saved = u.id ? await api(`/users/${u.id}`, { method: 'PUT', body: u }) : await api('/users', { method: 'POST', body: u });
   editing.value = null;
   await Promise.all([loadUsers(), loadSections()]);
+  if (saved?.cancelled) {
+    notice.value = `${u.name}: ${saved.cancelled === 1 ? 'se ha anulado 1 ausencia posterior' : `se han anulado ${saved.cancelled} ausencias posteriores`} a la fecha de baja`;
+  }
 });
 
 const openBalance = (u) => run(async () => {

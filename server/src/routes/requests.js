@@ -122,6 +122,9 @@ router.post('/requests', async (req, res) => {
   let { start_time = null, end_time = null } = req.body ?? {};
 
   let isAdvance = false;
+  if (me.termination_date && start_date > me.termination_date) {
+    fail(400, `Es posterior a la fecha de baja (${me.termination_date.split('-').reverse().join('/')})`);
+  }
 
   const type = await one('SELECT * FROM absence_types WHERE id = $1 AND active', [type_id]);
   if (!type) fail(400, 'Tipo de ausencia no válido');

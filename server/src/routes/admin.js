@@ -161,7 +161,18 @@ router.put('/users/:id', admin, async (req, res) => {
     if (req.body.password.length < 8) fail(400, 'La contraseña debe tener al menos 8 caracteres');
     await q('UPDATE users SET password_hash = $1 WHERE id = $2', [await bcrypt.hash(req.body.password, 10), row.id]);
   }
-  res.json(row);
+  // Baja: lo que empieza después no se va a disfrutar, así que no debe consumir saldo (p. ej. un anticipo de julio
+  // de alguien que se va en marzo). Se anula dejando constancia de quién y por qué.
+  let cancelled = 0;
+  const termination = fields[5];
+  if (termination) {
+    ({ rowCount: cancelled } = await q(
+      `UPDATE requests SET status = 'cancelada', cancelled_by = $1, cancelled_at = now(), cancel_reason = $2
+        WHERE user_id = $3 AND status IN ('pendiente', 'aprobada') AND start_date > $4`,
+      [req.user.id, `Baja el ${termination.split('-').reverse().join('/')}`, row.id, termination],
+    ));
+  }
+  res.json({ ...row, cancelled });
 });
 
 router.get('/users/:id/balance', async (req, res) => {
