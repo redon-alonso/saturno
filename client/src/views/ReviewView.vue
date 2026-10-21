@@ -14,6 +14,8 @@ const cycle = cycleOf(todayStr());
 const exportFrom = ref(cycle.start);
 const exportTo = ref(cycle.end);
 const exportSection = ref('');
+// Si «Desde» pasa de «Hasta» (escrita a mano, el selector ya lo impide), «Hasta» se mueve a ese mismo día
+watch(exportFrom, (from) => { if (from && exportTo.value && from > exportTo.value) exportTo.value = from; });
 const exporting = ref(false);
 
 async function runExport(path, filename) {
@@ -120,7 +122,7 @@ const calendarLink = (r) => ({
     </template>
 
     <section v-if="tab === 'historial'" class="card export-row">
-      <label class="field">Desde <input v-model="exportFrom" type="date" required /></label>
+      <label class="field">Desde <input v-model="exportFrom" type="date" :max="exportTo" required /></label>
       <label class="field">Hasta <input v-model="exportTo" type="date" :min="exportFrom" required /></label>
       <label v-if="isAdmin" class="field">Sección
         <select v-model="exportSection">
