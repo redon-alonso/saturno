@@ -5,7 +5,7 @@ import CancelBox from '../components/CancelBox.vue';
 import { api, download } from '../api.js';
 import { cycleOf, todayStr } from '@shared/dates.js';
 import { session } from '../store.js';
-import { amount, num, range, short, STATUS_LABELS, wholeDays } from '../format.js';
+import { amount, dmy, num, range, short, STATUS_LABELS, wholeDays } from '../format.js';
 
 const isAdmin = computed(() => session.user?.role === 'admin');
 
@@ -136,6 +136,10 @@ const calendarLink = (r) => ({
             </td>
             <td class="small">
               {{ r.reviewer_name }}<div v-if="r.review_comment" class="muted">{{ r.review_comment }}</div>
+              <div v-if="r.interrupted_by_name" class="cancel-info">
+                Interrumpida por {{ r.interrupted_by_name }} (estaba hasta el {{ dmy(r.original_end_date) }})<template
+                  v-if="r.interrupt_reason">: «{{ r.interrupt_reason }}»</template>
+              </div>
               <div v-if="r.cancelled_by_name" class="cancel-info">
                 {{ r.cancelled_by === r.user_id ? 'Cancelada por la propia persona' : `Anulada por ${r.cancelled_by_name}` }}
                 <template v-if="r.cancel_reason">: «{{ r.cancel_reason }}»</template>

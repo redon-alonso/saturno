@@ -6,7 +6,7 @@ import RequestForm from '../components/RequestForm.vue';
 import BalanceSummary from '../components/BalanceSummary.vue';
 import { api, refreshBalance } from '../api.js';
 import { session } from '../store.js';
-import { amount, range, STATUS_LABELS } from '../format.js';
+import { amount, dmy, range, STATUS_LABELS } from '../format.js';
 
 const rows = ref([]);
 const error = ref('');
@@ -73,6 +73,10 @@ async function onSaved() {
               <td class="small">
                 <template v-if="r.reviewer_name">{{ r.reviewer_name }}</template>
                 <div v-if="r.review_comment" class="muted">{{ r.review_comment }}</div>
+                <div v-if="r.interrupted_by_name" class="cancel-info">
+                  Interrumpida por {{ r.interrupted_by_name }} (estaba hasta el {{ dmy(r.original_end_date) }})<template
+                    v-if="r.interrupt_reason">: «{{ r.interrupt_reason }}»</template>
+                </div>
                 <div v-if="r.cancelled_by && r.cancelled_by !== r.user_id" class="cancel-info">
                   Anulada por {{ r.cancelled_by_name }}<template v-if="r.cancel_reason">: «{{ r.cancel_reason }}»</template>
                 </div>

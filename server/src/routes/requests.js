@@ -12,13 +12,14 @@ const router = Router();
 const REQUEST_SELECT = `
   SELECT r.*, u.name AS user_name, u.role AS user_role, u.section_id, s.name AS section_name,
          t.code, t.name AS type_name, t.color, t.is_absence, t.deducts_vacation, t.is_private,
-         rv.name AS reviewer_name, cb.name AS cancelled_by_name
+         rv.name AS reviewer_name, cb.name AS cancelled_by_name, ib.name AS interrupted_by_name
     FROM requests r
     JOIN users u ON u.id = r.user_id
     JOIN absence_types t ON t.id = r.type_id
     LEFT JOIN sections s ON s.id = u.section_id
     LEFT JOIN users rv ON rv.id = r.reviewer_id
-    LEFT JOIN users cb ON cb.id = r.cancelled_by`;
+    LEFT JOIN users cb ON cb.id = r.cancelled_by
+    LEFT JOIN users ib ON ib.id = r.interrupted_by`;
 
 const getRequest = (id) => one(`${REQUEST_SELECT} WHERE r.id = $1`, [id]);
 const getOwner = (id) => one(`SELECT ${USER_FIELDS} FROM users u WHERE u.id = $1`, [id]);
@@ -31,7 +32,7 @@ function forColleague(r) {
   const masked = r.is_private
     ? { type_id: null, code: null, type_name: 'Ausencia', color: '#8a879e', is_private: true }
     : {};
-  return { ...r, ...masked, comment: null, review_comment: null, cancel_reason: null };
+  return { ...r, ...masked, comment: null, review_comment: null, cancel_reason: null, interrupt_reason: null };
 }
 
 // Calendario: ausencias del grupo elegido que se solapan con [from, to]
@@ -251,6 +252,45 @@ router.post('/requests/:id/cancel', async (req, res) => {
   if (!rowCount) fail(409, 'La solicitud ya está cerrada');
 
   res.json(await getRequest(r.id));
+});
+
+/**
+ * Recorta una ausencia hasta `lastDay` (último día disfrutado): los días siguientes vuelven al saldo.
+ * La usan «Interrumpir» y la fecha de baja. Devuelve la solicitud actualizada o null si ya no se podía.
+ */
+export async function interruptRequest(r, lastDay, byId, reason) {
+  const holidays = await holidaySet(r.start_date, lastDay);
+  const type = await one('SELECT count_mode FROM absence_types WHERE id = $1', [r.type_id]);
+  const days = countDays(r.start_date, lastDay, type.count_mode, holidays);
+  const { rowCount } = await pool.query(
+    `UPDATE requests SET original_end_date = COALESCE(original_end_date, end_date), end_date = $1, days = $2,
+            interrupted_by = $3, interrupted_at = now(), interrupt_reason = $4
+      WHERE id = $5 AND status IN ('aprobada', 'pendiente') AND start_date <= $1 AND end_date > $1`,
+    [lastDay, days, byId, reason, r.id],
+  );
+  return rowCount ? getRequest(r.id) : null;
+}
+
+router.post('/requests/:id/interrupt', async (req, res) => {
+  const lastDay = req.body?.last_day;
+  const reason = String(req.body?.reason ?? '').trim().slice(0, 500);
+  const r = await getRequest(req.params.id);
+  if (!r) fail(404, 'Solicitud no encontrada');
+  const owner = await getOwner(r.user_id);
+  // Quien la aprueba (su jefe) o un administrador: es quien pide a la persona que vuelva
+  if (req.user.role !== 'admin' && (owner.id === req.user.id || !canReview(await loadOrg(), req.user, owner))) {
+    fail(403, 'No puedes interrumpir esta ausencia');
+  }
+  if (r.status !== 'aprobada') fail(409, 'Solo se interrumpen ausencias aprobadas');
+  if (r.start_time) fail(400, 'Una ausencia por horas no se interrumpe: anúlala');
+  if (!isValidDate(lastDay) || lastDay < r.start_date || lastDay >= r.end_date) {
+    fail(400, 'El último día tiene que estar dentro de la ausencia y antes de su fin');
+  }
+  if (!reason) fail(400, 'Indica el motivo: lo verá la persona afectada');
+
+  const updated = await interruptRequest(r, lastDay, req.user.id, reason);
+  if (!updated) fail(409, 'La ausencia ya cambió; recarga');
+  res.json(updated);
 });
 
 export default router;

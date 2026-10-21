@@ -101,6 +101,12 @@ END $$;
 -- Anticipo: vacaciones pedidas a cuenta de lo generado en el ciclo en curso (aún no consolidado)
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS is_advance BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- Interrupción: la ausencia se recorta (end_date pasa a ser el último día disfrutado); se guarda el fin original
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS original_end_date DATE;
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS interrupted_by INT REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS interrupted_at TIMESTAMPTZ;
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS interrupt_reason TEXT;
+
 -- Jerarquía: cada sección puede depender de otra (Dirección ← Almacén, Administración…)
 ALTER TABLE sections ADD COLUMN IF NOT EXISTS parent_id INT REFERENCES sections(id) ON DELETE SET NULL;
 

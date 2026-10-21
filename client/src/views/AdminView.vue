@@ -67,9 +67,10 @@ const saveUser = () => run(async () => {
   const saved = u.id ? await api(`/users/${u.id}`, { method: 'PUT', body: u }) : await api('/users', { method: 'POST', body: u });
   editing.value = null;
   await Promise.all([loadUsers(), loadSections()]);
-  if (saved?.cancelled) {
-    notice.value = `${u.name}: ${saved.cancelled === 1 ? 'se ha anulado 1 ausencia posterior' : `se han anulado ${saved.cancelled} ausencias posteriores`} a la fecha de baja`;
-  }
+  const changes = [];
+  if (saved?.interrupted) changes.push(`${saved.interrupted === 1 ? 'se ha interrumpido 1 ausencia' : `se han interrumpido ${saved.interrupted} ausencias`} en la fecha de baja`);
+  if (saved?.cancelled) changes.push(`${saved.cancelled === 1 ? 'se ha anulado 1 ausencia posterior' : `se han anulado ${saved.cancelled} ausencias posteriores`}`);
+  if (changes.length) notice.value = `${u.name}: ${changes.join(' y ')}`;
 });
 
 const openBalance = (u) => run(async () => {

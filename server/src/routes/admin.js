@@ -5,6 +5,7 @@ import { requireRole, USER_FIELDS } from '../auth.js';
 import { loadOrg, canReview, wouldCycle } from '../org.js';
 import { fail } from '../http.js';
 import { fullBalance, today, vacationBalance } from '../balance.js';
+import { interruptRequest } from './requests.js';
 import { isValidDate } from '../../../shared/dates.js';
 
 const router = Router();
@@ -172,7 +173,18 @@ router.put('/users/:id', admin, async (req, res) => {
       [req.user.id, `Baja el ${termination.split('-').reverse().join('/')}`, row.id, termination],
     ));
   }
-  res.json({ ...row, cancelled });
+  let interrupted = 0;
+  if (termination) {
+    const { rows: spanning } = await q(
+      `SELECT id, type_id, start_date, end_date FROM requests
+        WHERE user_id = $1 AND status IN ('pendiente', 'aprobada') AND start_date <= $2 AND end_date > $2`,
+      [row.id, termination],
+    );
+    for (const r of spanning) {
+      if (await interruptRequest(r, termination, req.user.id, `Baja el ${termination.split('-').reverse().join('/')}`)) interrupted++;
+    }
+  }
+  res.json({ ...row, cancelled, interrupted });
 });
 
 router.get('/users/:id/balance', async (req, res) => {

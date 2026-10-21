@@ -7,9 +7,10 @@ import AppDialog from '../components/AppDialog.vue';
 import RequestForm from '../components/RequestForm.vue';
 import DecisionBox from '../components/DecisionBox.vue';
 import CancelBox from '../components/CancelBox.vue';
+import InterruptBox from '../components/InterruptBox.vue';
 import { api, refreshBalance } from '../api.js';
 import { session } from '../store.js';
-import { amount, range, STATUS_LABELS } from '../format.js';
+import { amount, dmy, range, STATUS_LABELS } from '../format.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -96,6 +97,12 @@ const newDate = ref(null);
 const selected = ref(null);
 // El servidor decide con la jerarquía quién puede aprobar cada ausencia
 const canDecide = computed(() => selected.value?.status === 'pendiente' && selected.value.can_review);
+// Interrumpir: aprobada, de días completos, que aún no ha terminado; la ve su jefe o un administrador
+const canInterrupt = computed(() => {
+  const s = selected.value;
+  return s?.status === 'aprobada' && !s.start_time && s.end_date > s.start_date && s.end_date >= todayStr()
+    && (isAdmin.value || s.can_review);
+});
 
 async function onSaved() {
   newDate.value = null;
@@ -211,6 +218,11 @@ async function onDecided() {
         <div v-if="selected.comment" class="notice">“{{ selected.comment }}”</div>
         <div v-if="selected.reviewer_name" class="muted small">Revisada por {{ selected.reviewer_name }}</div>
         <DecisionBox v-if="canDecide" :request-id="selected.id" @decided="onDecided" />
+        <div v-if="selected.interrupted_by_name" class="notice warn small">
+          Interrumpida por {{ selected.interrupted_by_name }}: estaba hasta el {{ dmy(selected.original_end_date) }}
+          <template v-if="selected.interrupt_reason"> · «{{ selected.interrupt_reason }}»</template>
+        </div>
+        <InterruptBox v-if="canInterrupt" :key="selected.id" :request="selected" @interrupted="onDecided" />
         <CancelBox v-if="isAdmin && selected.status === 'aprobada'" :request-id="selected.id" @cancelled="onDecided" />
       </div>
     </AppDialog>
