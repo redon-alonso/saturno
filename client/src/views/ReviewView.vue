@@ -117,10 +117,6 @@ const calendarLink = (r) => ({
     </template>
 
     <section v-if="tab === 'historial'" class="card table-wrap">
-      <p class="muted small">
-        Ciclo {{ cycle.label }}. No aparece lo que anuló la propia persona, y lo de ciclos anteriores deja de mostrarse el
-        1 de septiembre.
-      </p>
       <table>
         <thead>
           <tr>

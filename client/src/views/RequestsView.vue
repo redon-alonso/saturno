@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue';
-import { cycleOf, todayStr } from '@shared/dates.js';
+import { todayStr } from '@shared/dates.js';
 import AppDialog from '../components/AppDialog.vue';
 import RequestForm from '../components/RequestForm.vue';
 import BalanceSummary from '../components/BalanceSummary.vue';
@@ -38,8 +38,6 @@ async function onSaved() {
   creating.value = false;
   await load();
 }
-// Ciclo en curso: el historial solo muestra lo de este ciclo en adelante
-const cycle = cycleOf(todayStr());
 </script>
 
 <template>
@@ -57,9 +55,8 @@ const cycle = cycleOf(todayStr());
 
     <section class="card">
       <p v-if="error" class="error" role="alert">{{ error }}</p>
-      <p v-if="!rows.length" class="muted">No tienes solicitudes en el ciclo {{ cycle.label }}.</p>
+      <p v-if="!rows.length" class="muted">Todavía no has hecho ninguna solicitud.</p>
       <div v-else class="table-wrap">
-        <p class="muted small">Ciclo {{ cycle.label }}: lo de ciclos anteriores deja de mostrarse el 1 de septiembre.</p>
         <table>
           <thead>
             <tr><th>Motivo</th><th>Fechas</th><th class="num">Duración</th><th>Estado</th><th>Respuesta</th><th /></tr>
