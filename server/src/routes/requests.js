@@ -5,7 +5,7 @@ import { loadOrg, canReview, groupOf, groupWhere, visibleGroups } from '../org.j
 import { fail } from '../http.js';
 import { vacationBalance, quotaBalances, today, workdayHours } from '../balance.js';
 import { holidaySet } from './holidays.js';
-import { countDays, hoursBetween, hoursToDays, isValidDate, isValidTime, isWorkingDay, maxDate } from '../../../shared/dates.js';
+import { cycleOf, countDays, hoursBetween, hoursToDays, isValidDate, isValidTime, isWorkingDay, maxDate } from '../../../shared/dates.js';
 
 const router = Router();
 
@@ -73,8 +73,22 @@ router.get('/calendar', async (req, res) => {
   res.json({ events, headcount: head.n, section: group, groups });
 });
 
+/**
+ * Historial visible: solo lo del ciclo en curso (o futuro) y las pendientes; lo de ciclos cerrados deja de verse el
+ * 1 de septiembre. Tampoco se muestra lo que anuló la propia persona: solo las interacciones con sus superiores.
+ * Los datos no se borran: el saldo los usa todos.
+ */
+function visibleHistory() {
+  const start = cycleOf(today()).start; // 'AAAA-MM-DD' generado aquí, no viene del usuario
+  return `NOT (r.status = 'cancelada' AND r.cancelled_by = r.user_id)
+    AND (r.status = 'pendiente' OR r.end_date >= '${start}')`;
+}
+
 router.get('/requests/mine', async (req, res) => {
-  const { rows } = await q(`${REQUEST_SELECT} WHERE r.user_id = $1 ORDER BY r.start_date DESC`, [req.user.id]);
+  const { rows } = await q(
+    `${REQUEST_SELECT} WHERE r.user_id = $1 AND ${visibleHistory()} ORDER BY r.start_date DESC`,
+    [req.user.id],
+  );
   res.json(rows);
 });
 
@@ -83,7 +97,7 @@ router.get('/requests/review', async (req, res) => {
   const me = req.user;
   if (me.role === 'usuario') fail(403, 'No tienes permiso');
   const history = req.query.status === 'historial';
-  const status = history ? `r.status <> 'pendiente'` : `r.status = 'pendiente'`;
+  const status = history ? `r.status <> 'pendiente' AND ${visibleHistory()}` : `r.status = 'pendiente'`;
   const order = history ? 'COALESCE(r.cancelled_at, r.reviewed_at) DESC NULLS LAST' : 'r.start_date';
   const org = await loadOrg();
 
