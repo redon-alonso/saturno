@@ -34,6 +34,13 @@ export function accrualByCycle({ hireDate, terminationDate, asOf, daysPerYear = 
  */
 export const wholeDays = (n) => Math.trunc(Math.round((n ?? 0) * 100) / 100) || 0; // || 0: sin «-0»
 
+/**
+ * Máximo pedible con anticipo: lo consolidado y lo generado en el ciclo se redondean hacia abajo POR SEPARADO
+ * (6,5 + 20,96 → 6 + 20 = 26). Hacia abajo y no truncando: un consolidado de −13,5 cuenta como −14, no −13.
+ */
+export const advanceableDays = (available, accruingDays = 0) =>
+  Math.floor(round2(available)) + Math.floor(round2(accruingDays)) || 0;
+
 /** Lo que ya se puede pedir (ciclos cerrados) y lo que se está generando (ciclo en curso). */
 export function splitAccrual(cycles) {
   const closed = cycles.filter((c) => !c.open);

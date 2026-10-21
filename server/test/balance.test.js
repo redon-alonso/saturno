@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { accrualByCycle } from '../src/balance.js';
-import { splitAccrual, wholeDays } from '../../shared/accrual.js';
+import { advanceableDays, splitAccrual, wholeDays } from '../../shared/accrual.js';
 import { countDays, cycleOf, easterSunday, hoursBetween, hoursToDays, isValidTime, isWorkingDay, nextWorkingDay } from '../../shared/dates.js';
 
 test('cycleOf: el ciclo va del 1 de septiembre al 31 de agosto', () => {
@@ -97,4 +97,12 @@ test('días enteros: se pide el entero; la fracción se acumula', () => {
   assert.equal(wholeDays(0.89), 0);
   assert.equal(wholeDays(29.999999), 30); // redondeo a céntimos antes de truncar: sin errores de coma flotante
   assert.equal(wholeDays(-0.4), 0);      // saldo negativo (baja): no se muestran días
+});
+
+test('anticipo: cada parte se redondea hacia abajo por separado', () => {
+  assert.equal(advanceableDays(6.5, 20.96), 26);   // 6 + 20, no 27,46 → 27
+  assert.equal(advanceableDays(6, 18), 24);
+  assert.equal(advanceableDays(-14, 17.92), 3);    // ya llevaba 14 adelantados
+  assert.equal(advanceableDays(-13.5, 17.92), 3);  // −13,5 cuenta como −14: no regala medio día
+  assert.equal(advanceableDays(0.84, 0.08), 0);
 });
