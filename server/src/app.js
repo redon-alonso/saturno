@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { one, q } from './db.js';
 import { authenticate, signToken, USER_FIELDS } from './auth.js';
 import { HttpError, fail } from './http.js';
-import { fullBalance, workdayHours } from './balance.js';
+import { fullBalance, workdayHours, vacationDaysPerYear } from './balance.js';
 import requests from './routes/requests.js';
 import admin from './routes/admin.js';
 import holidays from './routes/holidays.js';
@@ -46,7 +46,7 @@ app.put('/api/auth/password', async (req, res) => {
 app.get('/api/balance', async (req, res) => res.json(await fullBalance(req.user.id)));
 
 // Ajustes que el cliente necesita para calcular igual que el servidor
-app.get('/api/config', (req, res) => res.json({ workdayHours: workdayHours() }));
+app.get('/api/config', (req, res) => res.json({ workdayHours: workdayHours(), vacationDaysPerYear: vacationDaysPerYear() }));
 
 app.use('/api', requests);
 app.use('/api', admin);

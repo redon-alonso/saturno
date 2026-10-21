@@ -1,0 +1,39 @@
+// Generación de vacaciones por ciclo. Compartido: el servidor calcula el saldo y la ficha de usuario
+// muestra una vista previa con la misma regla.
+import { addDays, cycleOf, diffDays, maxDate, minDate } from './dates.js';
+
+const round2 = (n) => Math.round(n * 100) / 100;
+
+/**
+ * Días de vacaciones de cada ciclo (1 sep – 31 ago) desde `hireDate` hasta el ciclo de `asOf`.
+ * Regla de la empresa: se generan día a día y se disfrutan en el ciclo SIGUIENTE.
+ *  - Ciclos cerrados (anteriores al de `asOf`): todo lo trabajado en ellos; ya se puede pedir.
+ *  - Ciclo en curso (`open`): solo lo trabajado hasta `asOf`; no se puede pedir hasta `available_from`.
+ */
+export function accrualByCycle({ hireDate, terminationDate, asOf, daysPerYear = 30 }) {
+  const cycles = [];
+  const current = cycleOf(asOf).start;
+  for (let c = cycleOf(hireDate); c.start <= current; c = cycleOf(addDays(c.end, 1))) {
+    const open = c.start === current;
+    const from = maxDate(hireDate, c.start);
+    let to = terminationDate ? minDate(terminationDate, c.end) : c.end;
+    if (open) to = minDate(to, asOf);
+    const length = diffDays(c.start, c.end) + 1; // 365 o 366
+    const worked = to >= from ? diffDays(from, to) + 1 : 0;
+    cycles.push({
+      ...c, worked, length, open, available_from: addDays(c.end, 1),
+      days: round2((daysPerYear * worked) / length),
+    });
+  }
+  return cycles;
+}
+
+/** Lo que ya se puede pedir (ciclos cerrados) y lo que se está generando (ciclo en curso). */
+export function splitAccrual(cycles) {
+  const closed = cycles.filter((c) => !c.open);
+  const open = cycles.find((c) => c.open) ?? null;
+  return {
+    accrued: round2(closed.reduce((s, c) => s + c.days, 0)),
+    accruing: open ? { label: open.label, days: open.days, available_from: open.available_from } : null,
+  };
+}

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { todayStr } from '@shared/dates.js';
+import { todayStr, maxDate } from '@shared/dates.js';
+import { accrualByCycle, splitAccrual } from '@shared/accrual.js';
 import AppDialog from '../components/AppDialog.vue';
 import BalanceSummary from '../components/BalanceSummary.vue';
 import { api, refreshHolidays } from '../api.js';
@@ -45,6 +46,21 @@ function newUser() {
 const editUser = (u) => {
   editing.value = { ...u, password: '', termination_date: u.termination_date ?? '', balance_from: u.balance_from ?? '' };
 };
+
+/** Vista previa del saldo con los datos de la ficha (misma regla que el servidor; sin lo disfrutado ni ajustes) */
+const preview = computed(() => {
+  const u = editing.value;
+  if (!u?.hire_date) return null;
+  const from = u.balance_from ? maxDate(u.hire_date, u.balance_from) : u.hire_date;
+  const { accrued, accruing } = splitAccrual(accrualByCycle({
+    hireDate: from,
+    terminationDate: u.termination_date || null,
+    asOf: maxDate(todayStr(), from),
+    daysPerYear: session.config?.vacationDaysPerYear ?? 30,
+  }));
+  const initial = Number(u.initial_balance) || 0;
+  return { accrued, initial, total: Math.round((accrued + initial) * 100) / 100, accruing };
+});
 
 const saveUser = () => run(async () => {
   const u = editing.value;
@@ -386,7 +402,7 @@ const importSelected = () => run(async () => {
           <label class="field">Computar saldo desde (vacío = desde la incorporación)
             <input v-model="editing.balance_from" type="date" />
           </label>
-          <label class="field">Saldo inicial (días que traía a esa fecha)
+          <label class="field">Saldo inicial (días pendientes de disfrutar a esa fecha)
             <input v-model="editing.initial_balance" type="number" step="0.5" />
           </label>
           <label class="field">{{ editing.id ? 'Nueva contraseña (opcional)' : 'Contraseña' }}
@@ -394,10 +410,20 @@ const importSelected = () => run(async () => {
           </label>
         </div>
         <label class="check"><input v-model="editing.active" type="checkbox" /> Activo</label>
+        <p v-if="preview" class="notice">
+          Hoy tendrá <b>{{ num(preview.total) }} días</b> para pedir: {{ num(preview.accrued) }} generados en ciclos cerrados
+          + {{ num(preview.initial) }} de saldo inicial.
+          <template v-if="preview.accruing">
+            Este ciclo ({{ preview.accruing.label }}) lleva generados {{ num(preview.accruing.days) }}, que podrá pedir desde
+            el {{ dmy(preview.accruing.available_from) }}.
+          </template>
+          <span class="muted small">Sin contar lo ya disfrutado ni los ajustes.</span>
+        </p>
         <p class="muted small">
-          Los días se generan desde la incorporación (30 por ciclo sep–ago, proporcional al tiempo trabajado).
-          Para plantilla que ya existía antes de usar esta aplicación: indica en «Computar saldo desde» el inicio del
-          ciclo actual (p. ej. 01/09/2026) y en «Saldo inicial» los días que le quedaban de ciclos anteriores.
+          Los días se generan día a día desde la incorporación (30 por ciclo sep–ago) y se pueden disfrutar a partir
+          del ciclo siguiente. Para plantilla que ya existía antes de usar esta aplicación: indica en «Computar saldo
+          desde» el inicio del ciclo actual (p. ej. 01/09/2026) y en «Saldo inicial» los días que tiene para disfrutar
+          ahora (lo generado en ciclos anteriores y aún no disfrutado).
         </p>
         <div class="row"><span class="spacer" /><button class="btn primary">Guardar</button></div>
       </form>

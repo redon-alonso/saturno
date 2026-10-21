@@ -1,32 +1,20 @@
 import { q, one } from './db.js';
-import { addDays, cycleOf, diffDays, maxDate, minDate, todayStr } from '../../shared/dates.js';
+import { cycleOf, maxDate, todayStr } from '../../shared/dates.js';
+import { accrualByCycle, splitAccrual } from '../../shared/accrual.js';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
 export const today = () => todayStr(process.env.APP_TZ || 'Europe/Madrid');
 
+/** Días de vacaciones de un ciclo completo. */
+export const vacationDaysPerYear = () => Number(process.env.VACATION_DAYS_PER_YEAR) || 30;
+
 /** Horas de una jornada completa: base para convertir horas en fracción de día. */
 export const workdayHours = () => Number(process.env.WORKDAY_HOURS) || 8;
 
-/**
- * Días de vacaciones generados en cada ciclo (1 sep – 31 ago) desde el alta hasta el ciclo de `asOf`.
- * Parte pura, sin base de datos.
- *  - mode 'cycle': el proporcional del ciclo se concede entero al empezar el ciclo.
- *  - mode 'progressive': solo cuenta lo trabajado hasta `asOf`.
- */
-export function accrualByCycle({ hireDate, terminationDate, asOf, daysPerYear = 30, mode = 'cycle' }) {
-  const cycles = [];
-  const lastStart = cycleOf(asOf).start;
-  for (let c = cycleOf(hireDate); c.start <= lastStart; c = cycleOf(addDays(c.end, 1))) {
-    const from = maxDate(hireDate, c.start);
-    let to = terminationDate ? minDate(terminationDate, c.end) : c.end;
-    if (mode === 'progressive') to = minDate(to, asOf);
-    const length = diffDays(c.start, c.end) + 1; // 365 o 366
-    const worked = to >= from ? diffDays(from, to) + 1 : 0;
-    cycles.push({ ...c, worked, length, days: round2((daysPerYear * worked) / length) });
-  }
-  return cycles;
-}
+// La regla de generación (ciclos cerrados disponibles, el de curso generándose) vive en shared/ para que
+// la ficha de usuario pueda mostrar una vista previa idéntica
+export { accrualByCycle } from '../../shared/accrual.js';
 
 /** Saldo de vacaciones (acumulable entre ciclos) de un usuario. */
 export async function vacationBalance(userId, asOf = today()) {
@@ -41,8 +29,7 @@ export async function vacationBalance(userId, asOf = today()) {
     hireDate: from,
     terminationDate: user.termination_date,
     asOf: maxDate(asOf, from),
-    daysPerYear: Number(process.env.VACATION_DAYS_PER_YEAR) || 30,
-    mode: process.env.ACCRUAL_MODE === 'progressive' ? 'progressive' : 'cycle',
+    daysPerYear: vacationDaysPerYear(),
   });
 
   const { rows: reqs } = await q(
@@ -64,7 +51,8 @@ export async function vacationBalance(userId, asOf = today()) {
   }
 
   const sum = (status) => round2(reqs.filter((r) => r.status === status).reduce((s, r) => s + r.days, 0));
-  const accrued = round2(cycles.reduce((s, c) => s + c.days, 0));
+  // Solo lo generado en ciclos cerrados se puede pedir; el ciclo en curso se muestra aparte
+  const { accrued, accruing } = splitAccrual(cycles);
   const used = sum('aprobada');
   const pending = sum('pendiente');
   const total = round2(user.initial_balance + accrued + adj.total);
@@ -73,6 +61,7 @@ export async function vacationBalance(userId, asOf = today()) {
     asOf,
     initial: user.initial_balance,
     accrued,
+    accruing,
     adjustments: adj.total,
     total,
     used,

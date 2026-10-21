@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { num } from '../format.js';
+import { num, dmy } from '../format.js';
 
 const props = defineProps({ balance: { type: Object, required: true } });
 
@@ -38,8 +38,13 @@ const parts = computed(() => {
           <span class="tile-value">{{ num(v.pending) }}</span>
         </div>
         <div class="tile">
-          <span class="label"><span class="key total" /> Generados en total</span>
+          <span class="label"><span class="key total" /> Acumulado para disfrutar</span>
           <span class="tile-value">{{ num(v.total) }}</span>
+        </div>
+        <div v-if="v.accruing" class="tile accruing">
+          <span class="label">Generándose este ciclo · {{ v.accruing.label }}</span>
+          <span class="tile-value">{{ num(v.accruing.days) }}</span>
+          <span class="hint">se podrán pedir desde el {{ dmy(v.accruing.available_from) }}</span>
         </div>
         <div v-for="qt in balance.quotas" :key="qt.type_id" class="tile quota" :style="{ '--c': qt.color }">
           <span class="label"><span class="dot" /> {{ qt.name }} · {{ qt.cycle }}</span>
@@ -50,17 +55,17 @@ const parts = computed(() => {
     </div>
 
     <details>
-      <summary>Cómo se calcula · los días no caducan, se acumulan de un ciclo a otro</summary>
+      <summary>Cómo se calcula · lo generado en un ciclo se disfruta a partir del siguiente y no caduca</summary>
       <div class="table-wrap">
         <table class="small">
           <thead>
             <tr><th>Ciclo</th><th class="num">Días trabajados</th><th class="num">Generados</th><th class="num">Disfrutados</th></tr>
           </thead>
           <tbody>
-            <tr v-for="c in v.cycles" :key="c.label">
-              <td>{{ c.label }}</td>
+            <tr v-for="c in v.cycles" :key="c.label" :class="{ open: c.open }">
+              <td>{{ c.label }}<div v-if="c.open" class="muted">en curso: se podrá pedir desde el {{ dmy(c.available_from) }}</div></td>
               <td class="num">{{ c.worked }} / {{ c.length }}</td>
-              <td class="num">{{ num(c.days) }}</td>
+              <td class="num">{{ c.open ? `(${num(c.days)})` : num(c.days) }}</td>
               <td class="num">{{ num(c.used) }}</td>
             </tr>
           </tbody>
@@ -68,7 +73,7 @@ const parts = computed(() => {
             <tr v-if="v.initial"><td colspan="2">Saldo inicial</td><td class="num">{{ num(v.initial) }}</td><td /></tr>
             <tr v-if="v.adjustments"><td colspan="2">Ajustes de RRHH</td><td class="num">{{ num(v.adjustments) }}</td><td /></tr>
             <tr>
-              <th colspan="2">Total</th>
+              <th colspan="2">Total para pedir</th>
               <th class="num">{{ num(v.total) }}</th>
               <th class="num">{{ num(v.used) }}</th>
             </tr>
@@ -127,4 +132,8 @@ summary:hover { color: var(--text); }
   .summary { grid-template-columns: 1fr; justify-items: center; }
   .tiles { width: 100%; }
 }
+.tile.accruing { border-style: dashed; }
+.tile.accruing .tile-value { opacity: .6; }
+.tile.accruing .hint { font-size: .75rem; color: var(--muted); }
+tr.open td { color: var(--muted); }
 </style>
