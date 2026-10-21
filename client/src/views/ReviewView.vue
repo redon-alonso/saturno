@@ -43,13 +43,16 @@ async function load() {
   error.value = '';
   try {
     if (tab.value === 'pendientes') pending.value = await api('/requests/review');
-    if (tab.value === 'historial') history.value = await api('/requests/review?status=historial');
-    if (tab.value === 'equipo') team.value = await api('/team');
+    // La lista es la misma consulta que descarga el CSV: periodo y sección
+    if (tab.value === 'historial' && exportFrom.value && exportTo.value && exportTo.value >= exportFrom.value) {
+      history.value = await api(`/requests/review?status=historial&from=${exportFrom.value}&to=${exportTo.value}&${sectionQs()}`);
+    }
+    if (tab.value === 'equipo') team.value = await api(`/team?${sectionQs()}`);
   } catch (e) {
     error.value = e.message;
   }
 }
-watch(tab, load);
+watch([tab, exportFrom, exportTo, exportSection], load);
 onMounted(load);
 
 const calendarLink = (r) => ({

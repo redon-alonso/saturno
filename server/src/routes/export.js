@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q } from '../db.js';
 import { requireRole } from '../auth.js';
 import { teamOf } from './admin.js';
+import { historyPeriod, historyRows } from './requests.js';
 import { fail } from '../http.js';
 import { fullBalance, today } from '../balance.js';
 import { cycleOf, isValidDate } from '../../../shared/dates.js';
@@ -66,38 +67,24 @@ router.get('/export/saldos.csv', reviewers, async (req, res) => {
 
 // ---------- Detalle de solicitudes de un periodo ----------
 router.get('/export/solicitudes.csv', reviewers, async (req, res) => {
-  const cycle = cycleOf(today());
-  const userIds = (await teamOf(req.user, req.query.section)).map((u) => u.id);
-  const from = req.query.from || cycle.start;
-  const to = req.query.to || cycle.end;
-  if (!isValidDate(from) || !isValidDate(to) || to < from) fail(400, 'Periodo no válido');
-
-  const { rows } = await q(
-    `SELECT r.*, u.name AS user_name, s.name AS section_name, t.name AS type_name,
-            rv.name AS reviewer_name, cb.name AS cancelled_by_name
-       FROM requests r
-       JOIN users u ON u.id = r.user_id
-       JOIN absence_types t ON t.id = r.type_id
-       LEFT JOIN sections s ON s.id = u.section_id
-       LEFT JOIN users rv ON rv.id = r.reviewer_id
-       LEFT JOIN users cb ON cb.id = r.cancelled_by
-      WHERE r.start_date <= $2 AND r.end_date >= $1 AND r.user_id = ANY($3::int[])
-      ORDER BY r.start_date, u.name`,
-    [from, to, userIds],
-  );
+  // Exactamente lo que se ve en «Revisar → Historial» con el mismo periodo y sección
+  const period = historyPeriod(req.query);
+  const rows = await historyRows(req.user, period);
 
   const header = [
-    'Persona', 'Sección', 'Motivo', 'Desde', 'Hasta', 'Hora inicio', 'Hora fin', 'Horas', 'Días',
-    'Estado', 'Comentario', 'Revisada por', 'Respuesta', 'Anulada por', 'Motivo anulación', 'Solicitada el',
+    'Persona', 'Sección', 'Motivo', 'Desde', 'Hasta', 'Hora inicio', 'Hora fin', 'Horas', 'Días', 'Estado', 'Anticipo',
+    'Comentario', 'Revisada por', 'Registrada por', 'Respuesta', 'Interrumpida por', 'Fin original',
+    'Motivo interrupción', 'Anulada por', 'Motivo anulación', 'Solicitada el',
   ];
   const data = rows.map((r) => [
     r.user_name, r.section_name ?? '', r.type_name, dmy(r.start_date), dmy(r.end_date),
-    hhmm(r.start_time), hhmm(r.end_time), dec(r.hours), dec(r.days), STATUS[r.status], r.comment ?? '',
-    r.reviewer_name ?? '', r.review_comment ?? '',
-    r.cancelled_by && r.cancelled_by !== r.user_id ? r.cancelled_by_name : '', r.cancel_reason ?? '',
+    hhmm(r.start_time), hhmm(r.end_time), dec(r.hours), dec(r.days), STATUS[r.status], r.is_advance ? 'Sí' : '',
+    r.comment ?? '', r.reviewer_name ?? '', r.created_by_name ?? '', r.review_comment ?? '',
+    r.interrupted_by_name ?? '', dmy(r.original_end_date), r.interrupt_reason ?? '',
+    r.cancelled_by_name ?? '', r.cancel_reason ?? '',
     new Date(r.created_at).toLocaleDateString('es-ES', { timeZone: process.env.APP_TZ || 'Europe/Madrid' }),
   ]);
-  sendCsv(res, `solicitudes_${from}_${to}.csv`, header, data);
+  sendCsv(res, `solicitudes_${period.from}_${period.to}.csv`, header, data);
 });
 
 export default router;

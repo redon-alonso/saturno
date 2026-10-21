@@ -84,6 +84,34 @@ function visibleHistory() {
     AND (r.status = 'pendiente' OR r.end_date >= '${start}')`;
 }
 
+/**
+ * Historial de quien revisa: lo que ya se resolvió (no lo pendiente ni lo que anuló la propia persona) de las
+ * personas que aprueba, que toca el periodo [from, to] y, para el administrador, de una sección. Es lo que se ve en
+ * «Revisar → Historial» y lo que se descarga en su CSV: misma consulta, mismo orden.
+ */
+export async function historyRows(me, { from, to, section }) {
+  const org = await loadOrg();
+  const params = [from, to];
+  let where = `r.status <> 'pendiente' AND NOT (r.status = 'cancelada' AND r.cancelled_by = r.user_id)
+    AND r.start_date <= $2 AND r.end_date >= $1`;
+  if (me.role === 'admin' && section) {
+    params.push(Number(section));
+    where += ` AND u.section_id = $${params.length}`;
+  }
+  const { rows } = await q(`${REQUEST_SELECT} WHERE ${where} ORDER BY r.start_date DESC, u.name`, params);
+  return rows.filter((r) => r.user_id !== me.id
+    && canReview(org, me, { id: r.user_id, role: r.user_role, section_id: r.section_id }));
+}
+
+/** Periodo de la consulta del historial: por defecto, el ciclo en curso */
+export function historyPeriod(query) {
+  const cycle = cycleOf(today());
+  const from = query.from || cycle.start;
+  const to = query.to || cycle.end;
+  if (!isValidDate(from) || !isValidDate(to) || to < from) fail(400, 'Periodo no válido');
+  return { from, to, section: query.section || null };
+}
+
 router.get('/requests/mine', async (req, res) => {
   const { rows } = await q(
     `${REQUEST_SELECT} WHERE r.user_id = $1 AND ${visibleHistory()} ORDER BY r.start_date DESC`,
@@ -96,37 +124,31 @@ router.get('/requests/mine', async (req, res) => {
 router.get('/requests/review', async (req, res) => {
   const me = req.user;
   if (me.role === 'usuario') fail(403, 'No tienes permiso');
-  const history = req.query.status === 'historial';
-  const status = history ? `r.status <> 'pendiente' AND ${visibleHistory()}` : `r.status = 'pendiente'`;
-  const order = history ? 'COALESCE(r.cancelled_at, r.reviewed_at) DESC NULLS LAST' : 'r.start_date';
+  if (req.query.status === 'historial') return res.json(await historyRows(me, historyPeriod(req.query)));
   const org = await loadOrg();
 
   // Misma regla que para aprobar: solo lo de las personas a las que este jefe aprueba
-  const { rows: all } = await q(`${REQUEST_SELECT} WHERE ${status} ORDER BY ${order}`);
-  const rows = all
-    .filter((r) => r.user_id !== me.id
-      && canReview(org, me, { id: r.user_id, role: r.user_role, section_id: r.section_id }))
-    .slice(0, history ? 200 : undefined);
+  const { rows: all } = await q(`${REQUEST_SELECT} WHERE r.status = 'pendiente' ORDER BY r.start_date`);
+  const rows = all.filter((r) => r.user_id !== me.id
+    && canReview(org, me, { id: r.user_id, role: r.user_role, section_id: r.section_id }));
 
-  if (!history) {
-    for (const r of rows) {
-      // Quién más del grupo está fuera esos días: ayuda a decidir si se puede conceder
-      const group = groupOf(org, { role: r.user_role, section_id: r.section_id });
-      r.group_id = group;
-      r.group_name = org.nameOf(group);
-      const { rows: overlaps } = await q(
-        `SELECT r.id, u.name AS user_name, t.name AS type_name, t.color, r.start_date, r.end_date, r.status,
-                r.start_time, r.end_time
-           FROM requests r JOIN users u ON u.id = r.user_id JOIN absence_types t ON t.id = r.type_id
-          WHERE ${group == null ? 'u.section_id IS NULL' : groupWhere('$1')}
-            AND r.id <> $2 AND t.is_absence
-            AND r.status IN ('aprobada', 'pendiente') AND r.start_date <= $4 AND r.end_date >= $3
-          ORDER BY r.start_date`,
-        [group, r.id, r.start_date, r.end_date],
-      );
-      r.overlaps = overlaps;
-      if (r.deducts_vacation) r.vacation = await vacationBalance(r.user_id);
-    }
+  for (const r of rows) {
+    // Quién más del grupo está fuera esos días: ayuda a decidir si se puede conceder
+    const group = groupOf(org, { role: r.user_role, section_id: r.section_id });
+    r.group_id = group;
+    r.group_name = org.nameOf(group);
+    const { rows: overlaps } = await q(
+      `SELECT r.id, u.name AS user_name, t.name AS type_name, t.color, r.start_date, r.end_date, r.status,
+              r.start_time, r.end_time
+         FROM requests r JOIN users u ON u.id = r.user_id JOIN absence_types t ON t.id = r.type_id
+        WHERE ${group == null ? 'u.section_id IS NULL' : groupWhere('$1')}
+          AND r.id <> $2 AND t.is_absence
+          AND r.status IN ('aprobada', 'pendiente') AND r.start_date <= $4 AND r.end_date >= $3
+        ORDER BY r.start_date`,
+      [group, r.id, r.start_date, r.end_date],
+    );
+    r.overlaps = overlaps;
+    if (r.deducts_vacation) r.vacation = await vacationBalance(r.user_id);
   }
   res.json(rows);
 });
