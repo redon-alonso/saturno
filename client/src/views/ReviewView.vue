@@ -116,6 +116,17 @@ const calendarLink = (r) => ({
       </article>
     </template>
 
+    <section v-if="tab === 'historial'" class="card export-row">
+      <label class="field">Desde <input v-model="exportFrom" type="date" required /></label>
+      <label class="field">Hasta <input v-model="exportTo" type="date" :min="exportFrom" required /></label>
+      <label v-if="isAdmin" class="field">Sección
+        <select v-model="exportSection">
+          <option value="">Todas</option>
+          <option v-for="s in session.sections" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
+        </select>
+      </label>
+      <button class="btn" :disabled="exporting || !exportFrom || !exportTo" @click="exportRequests">⬇ Exportar CSV</button>
+    </section>
     <section v-if="tab === 'historial'" class="card table-wrap">
       <table>
         <thead>
@@ -153,25 +164,14 @@ const calendarLink = (r) => ({
       </table>
     </section>
 
-    <section v-if="tab === 'equipo'" class="card export">
-      <div class="export-head">
-        <h2>Exportar a Excel</h2>
-        <p class="muted small">Archivos CSV que se abren directamente con Excel (separador «;» y decimales con coma).</p>
-      </div>
-      <div class="export-row">
-        <label v-if="isAdmin" class="field">Sección
-          <select v-model="exportSection">
-            <option value="">Todas</option>
-            <option v-for="s in session.sections" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
-          </select>
-        </label>
-        <button class="btn" :disabled="exporting" @click="exportBalances">⬇ Saldos y horas por persona</button>
-      </div>
-      <div class="export-row">
-        <label class="field">Desde <input v-model="exportFrom" type="date" required /></label>
-        <label class="field">Hasta <input v-model="exportTo" type="date" :min="exportFrom" required /></label>
-        <button class="btn" :disabled="exporting || !exportFrom || !exportTo" @click="exportRequests">⬇ Solicitudes del periodo</button>
-      </div>
+    <section v-if="tab === 'equipo'" class="card export-row">
+      <label v-if="isAdmin" class="field">Sección
+        <select v-model="exportSection">
+          <option value="">Todas</option>
+          <option v-for="s in session.sections" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
+        </select>
+      </label>
+      <button class="btn" :disabled="exporting" @click="exportBalances">⬇ Exportar CSV</button>
     </section>
 
     <section v-if="tab === 'equipo'" class="card table-wrap">
@@ -217,9 +217,6 @@ const calendarLink = (r) => ({
 .info { gap: 8px; }
 .overlaps { margin: 4px 0 0; padding-left: 4px; list-style: none; display: grid; gap: 2px; }
 .overlaps li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.export { display: grid; gap: 14px; }
-.export-head h2 { margin: 0; }
-.export-head p { margin: 4px 0 0; }
 .export-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .export-row .field { width: 180px; }
 .cancel-cell { min-width: 120px; text-align: right; }
