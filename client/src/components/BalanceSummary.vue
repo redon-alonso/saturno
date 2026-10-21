@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { num, dmy } from '../format.js';
+import { num, dmy, wholeDays } from '../format.js';
 
 const props = defineProps({ balance: { type: Object, required: true } });
 
@@ -17,13 +17,13 @@ const parts = computed(() => {
     <div class="summary">
       <div
         class="gauge"
-        :class="{ low: v.available <= 3 }"
+        :class="{ low: v.usable <= 3 }"
         :style="{ '--used': parts.used, '--pend': parts.pending }"
         role="img"
-        :aria-label="`${num(v.available)} días disponibles de ${num(v.total)}`"
+        :aria-label="`${v.usable} días disponibles de ${wholeDays(v.total)}`"
       >
         <div class="gauge-inner">
-          <span class="value">{{ num(v.available) }}</span>
+          <span class="value">{{ v.usable }}</span>
           <span class="label">días para pedir</span>
         </div>
       </div>
@@ -39,11 +39,11 @@ const parts = computed(() => {
         </div>
         <div class="tile">
           <span class="label"><span class="key total" /> Acumulado para disfrutar</span>
-          <span class="tile-value">{{ num(v.total) }}</span>
+          <span class="tile-value">{{ wholeDays(v.total) }}</span>
         </div>
         <div v-if="v.accruing" class="tile accruing">
           <span class="label">Generándose este ciclo · {{ v.accruing.label }}</span>
-          <span class="tile-value">{{ num(v.accruing.days) }}</span>
+          <span class="tile-value">{{ wholeDays(v.accruing.days) }}</span>
           <span class="hint">se podrán pedir desde el {{ dmy(v.accruing.available_from) }}</span>
         </div>
         <div v-for="qt in balance.quotas" :key="qt.type_id" class="tile quota" :style="{ '--c': qt.color }">
@@ -72,6 +72,12 @@ const parts = computed(() => {
           <tfoot>
             <tr v-if="v.initial"><td colspan="2">Saldo inicial</td><td class="num">{{ num(v.initial) }}</td><td /></tr>
             <tr v-if="v.adjustments"><td colspan="2">Ajustes de RRHH</td><td class="num">{{ num(v.adjustments) }}</td><td /></tr>
+            <tr v-if="v.available - v.usable > 0">
+              <td colspan="2">
+                Fracción que se acumula: no se puede pedir suelta; se suma a lo del ciclo siguiente o, si hay baja, va al finiquito
+              </td>
+              <td class="num">{{ num(Math.round((v.available - v.usable) * 100) / 100) }}</td><td />
+            </tr>
             <tr>
               <th colspan="2">Total para pedir</th>
               <th class="num">{{ num(v.total) }}</th>

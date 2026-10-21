@@ -173,7 +173,8 @@ router.post('/requests', async (req, res) => {
   if (type.deducts_vacation) {
     // Se permite pedir contra lo que se genere en el ciclo de la fecha pedida (p. ej. pedir en agosto para octubre)
     const bal = await vacationBalance(me.id, maxDate(today(), start_date));
-    if (days > bal.available) fail(400, `Pides ${days} días pero solo tienes ${bal.available} disponibles`);
+    // Solo se disfrutan días enteros: la fracción se acumula para el ciclo siguiente
+    if (days > bal.usable) fail(400, `Son ${days} días pero solo tienes ${bal.usable} disponibles`);
   }
   if (type.annual_quota != null) {
     const quota = (await quotaBalances(me.id, start_date)).find((x) => x.type_id === type.id);

@@ -5,7 +5,7 @@ import CancelBox from '../components/CancelBox.vue';
 import { api, download } from '../api.js';
 import { cycleOf, todayStr } from '@shared/dates.js';
 import { session } from '../store.js';
-import { amount, num, range, short, STATUS_LABELS } from '../format.js';
+import { amount, num, range, short, STATUS_LABELS, wholeDays } from '../format.js';
 
 const isAdmin = computed(() => session.user?.role === 'admin');
 
@@ -91,8 +91,8 @@ const calendarLink = (r) => ({
           </div>
           <div>{{ range(r) }} · <b>{{ amount(r) }}</b></div>
           <div v-if="r.vacation" class="small" :class="r.vacation.available < 0 ? 'error' : 'muted'">
-            Saldo de vacaciones tras esta solicitud: {{ num(r.vacation.available) }} días
-            (total {{ num(r.vacation.total) }}, disfrutados {{ num(r.vacation.used) }})
+            Saldo de vacaciones tras esta solicitud: {{ r.vacation.usable }} días
+            (total {{ wholeDays(r.vacation.total) }}, disfrutados {{ num(r.vacation.used) }})
           </div>
           <div v-if="r.comment" class="notice small">{{ r.comment }}</div>
 
@@ -180,10 +180,10 @@ const calendarLink = (r) => ({
             <td>{{ u.name }}</td>
             <td class="muted">{{ u.section_name }}</td>
             <td class="muted small">{{ short(u.hire_date) }} {{ u.hire_date.slice(0, 4) }}</td>
-            <td class="num">{{ num(u.balance.vacation.total) }}</td>
+            <td class="num">{{ wholeDays(u.balance.vacation.total) }}</td>
             <td class="num">{{ num(u.balance.vacation.used) }}</td>
             <td class="num">{{ num(u.balance.vacation.pending) }}</td>
-            <td class="num"><b>{{ num(u.balance.vacation.available) }}</b></td>
+            <td class="num"><b>{{ u.balance.vacation.usable }}</b></td>
             <td class="small">
               <div v-for="qt in u.balance.quotas" :key="qt.type_id">{{ qt.name }}: {{ num(qt.available) }}/{{ num(qt.quota) }}</div>
             </td>

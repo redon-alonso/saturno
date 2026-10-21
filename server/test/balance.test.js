@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { accrualByCycle } from '../src/balance.js';
-import { splitAccrual } from '../../shared/accrual.js';
+import { splitAccrual, wholeDays } from '../../shared/accrual.js';
 import { countDays, cycleOf, easterSunday, hoursBetween, hoursToDays, isValidTime, isWorkingDay, nextWorkingDay } from '../../shared/dates.js';
 
 test('cycleOf: el ciclo va del 1 de septiembre al 31 de agosto', () => {
@@ -89,4 +89,12 @@ test('días laborables: ni fines de semana ni festivos', () => {
   assert.equal(nextWorkingDay('2026-10-31'), '2026-11-02'); // del sábado al lunes
   assert.equal(nextWorkingDay('2026-10-10', holidays), '2026-10-13'); // sábado, domingo y festivo
   assert.equal(nextWorkingDay('2026-10-28'), '2026-10-28'); // ya es laborable
+});
+
+test('días enteros: se pide el entero; la fracción se acumula', () => {
+  assert.equal(wholeDays(25.89), 25);
+  assert.equal(wholeDays(25.89 + 30), 55); // el 0,89 se suma al ciclo siguiente
+  assert.equal(wholeDays(0.89), 0);
+  assert.equal(wholeDays(29.999999), 30); // redondeo a céntimos antes de truncar: sin errores de coma flotante
+  assert.equal(wholeDays(-0.4), 0);      // saldo negativo (baja): no se muestran días
 });

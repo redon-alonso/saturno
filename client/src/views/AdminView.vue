@@ -6,7 +6,7 @@ import AppDialog from '../components/AppDialog.vue';
 import BalanceSummary from '../components/BalanceSummary.vue';
 import { api, refreshHolidays } from '../api.js';
 import { session, ROLE_LABELS } from '../store.js';
-import { num, dmy } from '../format.js';
+import { num, dmy, wholeDays } from '../format.js';
 
 const tab = ref('usuarios');
 const error = ref('');
@@ -411,8 +411,8 @@ const importSelected = () => run(async () => {
         </div>
         <label class="check"><input v-model="editing.active" type="checkbox" /> Activo</label>
         <p v-if="preview" class="notice">
-          Hoy tendrá <b>{{ num(preview.total) }} días</b> para pedir: {{ num(preview.accrued) }} generados en ciclos cerrados
-          + {{ num(preview.initial) }} de saldo inicial.
+          Hoy tendrá <b>{{ wholeDays(preview.total) }} días</b> para pedir ({{ num(preview.accrued) }} generados en ciclos
+          cerrados + {{ num(preview.initial) }} de saldo inicial; los decimales se acumulan).
           <template v-if="preview.accruing">
             Este ciclo ({{ preview.accruing.label }}) lleva generados {{ num(preview.accruing.days) }}, que podrá pedir desde
             el {{ dmy(preview.accruing.available_from) }}.

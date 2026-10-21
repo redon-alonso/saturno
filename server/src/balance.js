@@ -1,6 +1,6 @@
 import { q, one } from './db.js';
 import { cycleOf, maxDate, todayStr } from '../../shared/dates.js';
-import { accrualByCycle, splitAccrual } from '../../shared/accrual.js';
+import { accrualByCycle, splitAccrual, wholeDays } from '../../shared/accrual.js';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -67,7 +67,8 @@ export async function vacationBalance(userId, asOf = today()) {
     used,
     pending,
     remaining: round2(total - used),            // sin contar lo pendiente
-    available: round2(total - used - pending),  // lo que aún se puede pedir
+    available: round2(total - used - pending),  // saldo exacto (los decimales cuentan para el finiquito)
+    usable: wholeDays(total - used - pending),   // lo que se puede pedir: solo días enteros
     cycles: cycles.reverse(),
   };
 }

@@ -22,7 +22,7 @@ const vacation = computed(() => session.balance?.vacation);
 /** Proporción del saldo total que queda por pedir (para el anillo). */
 const ratio = computed(() => {
   const v = vacation.value;
-  return v && v.total > 0 ? Math.max(0, Math.min(1, v.available / v.total)) : 0;
+  return v && v.total > 0 ? Math.max(0, Math.min(1, v.usable / v.total)) : 0;
 });
 
 function exit() {
@@ -46,12 +46,12 @@ function exit() {
         v-if="vacation"
         to="/solicitudes"
         class="balance-chip"
-        :class="{ low: vacation.available <= 3 }"
+        :class="{ low: vacation.usable <= 3 }"
         :style="{ '--p': ratio }"
-        :title="`Te quedan ${num(vacation.available)} días de vacaciones por pedir`"
+        :title="`Te quedan ${vacation.usable} días de vacaciones por pedir`"
       >
         <span class="ring" aria-hidden="true" />
-        <span><b>{{ num(vacation.available) }}</b> días libres</span>
+        <span><b>{{ vacation.usable }}</b> días libres</span>
       </RouterLink>
       <span class="who">
         {{ session.user.name }}

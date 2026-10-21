@@ -36,6 +36,7 @@ Configura en `server/.env` al menos `DATABASE_URL`, un `JWT_SECRET` largo y el a
 | **Vacaciones** | 30 días naturales por ciclo (`VACATION_DAYS_PER_YEAR`), proporcionales a los días contratado dentro del ciclo (365/366) |
 | **Devengo** | Progresivo: los días se generan día a día y **se disfrutan a partir del ciclo siguiente**. Lo generado hasta el 31 de agosto es lo que se puede pedir en el ciclo que empieza el 1 de septiembre; lo del ciclo en curso se muestra «generándose» y no se puede pedir todavía |
 | **Acumulación** | Los días no caducan: saldo = inicial + generado en los ciclos cerrados + ajustes − aprobados − pendientes |
+| **Días enteros** | Por dentro se guardan los decimales (cuentan para el finiquito), pero al trabajador se le muestra y se le deja pedir solo la parte entera: con 25,89 puede pedir 25; los 0,89 se suman a lo del ciclo siguiente. La exportación CSV incluye el saldo exacto y el disfrutable |
 | **Asuntos propios** | Cupo por ciclo (2 por defecto, editable), en días laborables, **no** acumulable |
 | **Médico / teletrabajo** | Sin cupo; médico admite horas; teletrabajo no cuenta como «fuera» en el cuadrante |
 | **Días no laborables** | Fines de semana y festivos no se pueden pedir: toda ausencia empieza en un día laborable. Unas vacaciones sí pueden abarcarlos (de lunes a domingo = 7 días naturales) |

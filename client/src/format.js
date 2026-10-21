@@ -1,5 +1,6 @@
 const nfmt = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
 export const num = (n) => nfmt.format(n ?? 0);
+export { wholeDays } from '@shared/accrual.js';
 
 /** 'YYYY-MM-DD' → '20/10/2026' */
 export const dmy = (s) => (s ? s.split('-').reverse().join('/') : '');

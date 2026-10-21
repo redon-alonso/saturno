@@ -28,6 +28,12 @@ export function accrualByCycle({ hireDate, terminationDate, asOf, daysPerYear = 
   return cycles;
 }
 
+/**
+ * Días que se pueden disfrutar: el saldo exacto truncado. La fracción (p. ej. 0,89) no se pierde: se suma a lo
+ * del ciclo siguiente y, si hay baja, va al finiquito.
+ */
+export const wholeDays = (n) => Math.trunc(Math.round((n ?? 0) * 100) / 100) || 0; // || 0: sin «-0»
+
 /** Lo que ya se puede pedir (ciclos cerrados) y lo que se está generando (ciclo en curso). */
 export function splitAccrual(cycles) {
   const closed = cycles.filter((c) => !c.open);

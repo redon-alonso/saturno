@@ -3,7 +3,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { countDays, hoursBetween, hoursToDays, isWorkingDay, maxDate, nextWorkingDay, todayStr } from '@shared/dates.js';
 import { api, refreshBalance } from '../api.js';
 import { session } from '../store.js';
-import { num } from '../format.js';
+import { num, wholeDays } from '../format.js';
 
 const props = defineProps({ date: { type: String, required: true } });
 const emit = defineEmits(['saved', 'cancel']);
@@ -63,8 +63,11 @@ const balanceInfo = computed(() => {
   const t = type.value;
   if (!t) return null;
   if (t.deducts_vacation) {
-    const available = session.balance?.vacation?.available ?? 0;
-    return { available, after: available - days.value, unit: 'días de vacaciones' };
+    // Se ven y se piden días enteros; lo que quedará se trunca igual que el saldo
+    const exact = session.balance?.vacation?.available ?? 0;
+    const available = session.balance?.vacation?.usable ?? 0;
+    const after = days.value > available ? available - days.value : wholeDays(exact - days.value);
+    return { available, after, unit: 'días de vacaciones' };
   }
   const quota = session.balance?.quotas?.find((x) => x.type_id === t.id);
   if (quota) return { available: quota.available, after: quota.available - days.value, unit: `días de ${t.name.toLowerCase()}` };

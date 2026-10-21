@@ -48,7 +48,7 @@ router.get('/export/saldos.csv', reviewers, async (req, res) => {
 
   const header = [
     'Persona', 'Correo', 'Sección', 'Incorporación',
-    'Vacaciones generadas (días)', 'Vacaciones disfrutadas (días)', 'Pendientes de aprobar (días)', 'Disponibles (días)',
+    'Vacaciones generadas (días)', 'Vacaciones disfrutadas (días)', 'Pendientes de aprobar (días)', 'Disponibles exactos (días)', 'Disfrutables (días enteros)',
     ...quotaNames.map((n) => `${n} disponibles ${cycle.label}`),
     ...hourTypes.map((t) => `Horas de ${t.name.toLowerCase()} ${cycle.label}`),
   ];
@@ -56,7 +56,7 @@ router.get('/export/saldos.csv', reviewers, async (req, res) => {
     const b = balances[i];
     return [
       u.name, u.email, u.section_name ?? '', dmy(u.hire_date),
-      dec(b.vacation.total), dec(b.vacation.used), dec(b.vacation.pending), dec(b.vacation.available),
+      dec(b.vacation.total), dec(b.vacation.used), dec(b.vacation.pending), dec(b.vacation.available), dec(b.vacation.usable),
       ...quotaNames.map((n) => dec(b.quotas.find((x) => x.name === n)?.available)),
       ...hourTypes.map((t) => dec(hoursOf(u.id, t.id))),
     ];
