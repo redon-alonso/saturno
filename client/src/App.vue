@@ -51,7 +51,8 @@ function exit() {
         :title="`Te quedan ${vacation.usable} días de vacaciones por pedir`"
       >
         <span class="ring" aria-hidden="true" />
-        <span><b>{{ vacation.usable }}</b> días libres</span>
+        <span v-if="vacation.usable >= 0"><b>{{ vacation.usable }}</b> días libres</span>
+        <span v-else><b>{{ -vacation.usable }}</b> días adelantados</span>
       </RouterLink>
       <span class="who">
         {{ session.user.name }}

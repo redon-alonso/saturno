@@ -4,7 +4,7 @@ import { q, one } from '../db.js';
 import { requireRole, USER_FIELDS } from '../auth.js';
 import { loadOrg, canReview, wouldCycle } from '../org.js';
 import { fail } from '../http.js';
-import { fullBalance, vacationBalance } from '../balance.js';
+import { fullBalance, today, vacationBalance } from '../balance.js';
 import { isValidDate } from '../../../shared/dates.js';
 
 const router = Router();
@@ -173,7 +173,8 @@ router.get('/users/:id/balance', async (req, res) => {
        LEFT JOIN users u ON u.id = a.created_by WHERE a.user_id = $1 ORDER BY a.created_at DESC`,
     [owner.id],
   );
-  res.json({ ...(await fullBalance(owner.id)), adjustments });
+  const asOf = isValidDate(req.query.as_of) && req.query.as_of > today() ? req.query.as_of : today();
+  res.json({ ...(await fullBalance(owner.id, asOf)), adjustments });
 });
 
 router.post('/users/:id/adjustments', admin, async (req, res) => {

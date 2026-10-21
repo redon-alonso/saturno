@@ -23,8 +23,8 @@ const parts = computed(() => {
         :aria-label="`${v.usable} días disponibles de ${wholeDays(v.total)}`"
       >
         <div class="gauge-inner">
-          <span class="value">{{ v.usable }}</span>
-          <span class="label">días para pedir</span>
+          <span class="value">{{ Math.abs(v.usable) }}</span>
+          <span class="label">{{ v.usable < 0 ? 'días adelantados' : 'días para pedir' }}</span>
         </div>
       </div>
 
@@ -44,7 +44,8 @@ const parts = computed(() => {
         <div v-if="v.accruing" class="tile accruing">
           <span class="label">Generándose este ciclo · {{ v.accruing.label }}</span>
           <span class="tile-value">{{ wholeDays(v.accruing.days) }}</span>
-          <span class="hint">se podrán pedir desde el {{ dmy(v.accruing.available_from) }}</span>
+          <span class="hint">se consolidan el {{ dmy(v.accruing.available_from) }}<template v-if="v.advanceable > Math.max(v.usable, 0)">;
+            hoy se podrían adelantar {{ v.advanceable - Math.max(v.usable, 0) }} como anticipo</template></span>
         </div>
         <div v-for="qt in balance.quotas" :key="qt.type_id" class="tile quota" :style="{ '--c': qt.color }">
           <span class="label"><span class="dot" /> {{ qt.name }} · {{ qt.cycle }}</span>

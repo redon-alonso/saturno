@@ -121,6 +121,8 @@ router.post('/requests', async (req, res) => {
   const { type_id, start_date, end_date = start_date, comment } = req.body ?? {};
   let { start_time = null, end_time = null } = req.body ?? {};
 
+  let isAdvance = false;
+
   const type = await one('SELECT * FROM absence_types WHERE id = $1 AND active', [type_id]);
   if (!type) fail(400, 'Tipo de ausencia no válido');
   if (!isValidDate(start_date) || !isValidDate(end_date)) fail(400, 'Fechas no válidas');
@@ -173,8 +175,20 @@ router.post('/requests', async (req, res) => {
   if (type.deducts_vacation) {
     // Se permite pedir contra lo que se genere en el ciclo de la fecha pedida (p. ej. pedir en agosto para octubre)
     const bal = await vacationBalance(me.id, maxDate(today(), start_date));
-    // Solo se disfrutan días enteros: la fracción se acumula para el ciclo siguiente
-    if (days > bal.usable) fail(400, `Son ${days} días pero solo tienes ${bal.usable} disponibles`);
+    // Solo se disfrutan días enteros: la fracción se acumula para el ciclo siguiente.
+    // Si no llega lo consolidado, se puede pedir como anticipo (días completos) hasta lo generado en el
+    // ciclo hasta el inicio de la ausencia; el jefe lo ve marcado como anticipo al aprobar.
+    if (days > bal.usable) {
+      if (hours != null) {
+        fail(400, `Son ${days} días pero solo puedes pedir ${Math.max(bal.usable, 0)}: los anticipos solo se piden por días completos`);
+      }
+      if (days > bal.advanceable) {
+        const withAdvance = bal.advanceable > Math.max(bal.usable, 0);
+        fail(400, `Son ${days} días pero solo puedes pedir ${Math.max(bal.advanceable, 0)}`
+          + (withAdvance ? ', contando el anticipo de lo generado este ciclo hasta esa fecha' : ''));
+      }
+      isAdvance = true;
+    }
   }
   if (type.annual_quota != null) {
     const quota = (await quotaBalances(me.id, start_date)).find((x) => x.type_id === type.id);
@@ -184,9 +198,9 @@ router.post('/requests', async (req, res) => {
   }
 
   const { rows: [created] } = await q(
-    `INSERT INTO requests (user_id, type_id, start_date, end_date, start_time, end_time, hours, days, comment)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-    [me.id, type.id, start_date, end_date, start_time, end_time, hours, days, comment?.trim() || null],
+    `INSERT INTO requests (user_id, type_id, start_date, end_date, start_time, end_time, hours, days, comment, is_advance)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+    [me.id, type.id, start_date, end_date, start_time, end_time, hours, days, comment?.trim() || null, isAdvance],
   );
   res.status(201).json(await getRequest(created.id));
 });

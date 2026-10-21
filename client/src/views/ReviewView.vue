@@ -88,6 +88,7 @@ const calendarLink = (r) => ({
             <b>{{ r.user_name }}</b>
             <span class="muted">· {{ r.type_name }}</span>
             <span v-if="r.section_name" class="badge">{{ r.section_name }}</span>
+            <span v-if="r.is_advance" class="badge pendiente" title="A cuenta de lo generado este ciclo, aún no consolidado">anticipo</span>
           </div>
           <div>{{ range(r) }} · <b>{{ amount(r) }}</b></div>
           <div v-if="r.vacation" class="small" :class="r.vacation.available < 0 ? 'error' : 'muted'">
@@ -129,7 +130,10 @@ const calendarLink = (r) => ({
             <td><span class="row"><span class="dot" :style="{ '--c': r.color }" />{{ r.type_name }}</span></td>
             <td>{{ range(r) }}</td>
             <td class="num">{{ amount(r) }}</td>
-            <td><span class="badge" :class="r.status">{{ STATUS_LABELS[r.status] }}</span></td>
+            <td>
+              <span class="badge" :class="r.status">{{ STATUS_LABELS[r.status] }}</span>
+              <span v-if="r.is_advance" class="badge">anticipo</span>
+            </td>
             <td class="small">
               {{ r.reviewer_name }}<div v-if="r.review_comment" class="muted">{{ r.review_comment }}</div>
               <div v-if="r.cancelled_by_name" class="cancel-info">

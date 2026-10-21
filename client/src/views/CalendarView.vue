@@ -204,6 +204,7 @@ async function onDecided() {
         <div class="detail-head">
           <span class="detail-type">{{ selected.type_name }}</span>
           <span class="badge" :class="selected.status">{{ STATUS_LABELS[selected.status] }}</span>
+          <span v-if="selected.is_advance" class="badge">anticipo</span>
         </div>
         <div class="detail-range">{{ range(selected) }} <span class="muted">· {{ amount(selected) }}</span></div>
         <div v-if="selected.section_name" class="muted small">Sección {{ selected.section_name }}</div>

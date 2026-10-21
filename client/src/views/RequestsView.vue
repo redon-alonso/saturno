@@ -66,7 +66,10 @@ async function onSaved() {
               <td><span class="row"><span class="dot" :style="{ '--c': r.color }" />{{ r.type_name }}</span></td>
               <td>{{ range(r) }}</td>
               <td class="num">{{ amount(r) }}</td>
-              <td><span class="badge" :class="r.status">{{ STATUS_LABELS[r.status] }}</span></td>
+              <td>
+                <span class="badge" :class="r.status">{{ STATUS_LABELS[r.status] }}</span>
+                <span v-if="r.is_advance" class="badge" title="A cuenta de lo generado este ciclo">anticipo</span>
+              </td>
               <td class="small">
                 <template v-if="r.reviewer_name">{{ r.reviewer_name }}</template>
                 <div v-if="r.review_comment" class="muted">{{ r.review_comment }}</div>

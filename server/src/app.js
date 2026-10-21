@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { one, q } from './db.js';
 import { authenticate, signToken, USER_FIELDS } from './auth.js';
 import { HttpError, fail } from './http.js';
-import { fullBalance, workdayHours, vacationDaysPerYear } from './balance.js';
+import { isValidDate } from '../../shared/dates.js';
+import { fullBalance, workdayHours, vacationDaysPerYear, today } from './balance.js';
 import requests from './routes/requests.js';
 import admin from './routes/admin.js';
 import holidays from './routes/holidays.js';
@@ -43,7 +44,9 @@ app.put('/api/auth/password', async (req, res) => {
   res.status(204).end();
 });
 
-app.get('/api/balance', async (req, res) => res.json(await fullBalance(req.user.id)));
+/** `as_of` (opcional): saldo en la fecha de una ausencia futura, para calcular el anticipo posible */
+const asOfParam = (v) => (isValidDate(v) && v > today() ? v : today());
+app.get('/api/balance', async (req, res) => res.json(await fullBalance(req.user.id, asOfParam(req.query.as_of))));
 
 // Ajustes que el cliente necesita para calcular igual que el servidor
 app.get('/api/config', (req, res) => res.json({ workdayHours: workdayHours(), vacationDaysPerYear: vacationDaysPerYear() }));

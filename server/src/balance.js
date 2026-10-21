@@ -69,6 +69,8 @@ export async function vacationBalance(userId, asOf = today()) {
     remaining: round2(total - used),            // sin contar lo pendiente
     available: round2(total - used - pending),  // saldo exacto (los decimales cuentan para el finiquito)
     usable: wholeDays(total - used - pending),   // lo que se puede pedir: solo días enteros
+    // Con anticipo: además, lo generado en el ciclo de `asOf` hasta esa fecha (se consolida el 1 de septiembre)
+    advanceable: wholeDays(total - used - pending + (accruing?.days ?? 0)),
     cycles: cycles.reverse(),
   };
 }
@@ -90,6 +92,6 @@ export async function quotaBalances(userId, date = today()) {
   return rows.map((r) => ({ ...r, cycle: c.label, available: round2(r.quota - r.used - r.pending) }));
 }
 
-export async function fullBalance(userId) {
-  return { vacation: await vacationBalance(userId), quotas: await quotaBalances(userId) };
+export async function fullBalance(userId, asOf = today()) {
+  return { vacation: await vacationBalance(userId, asOf), quotas: await quotaBalances(userId, asOf) };
 }

@@ -98,6 +98,9 @@ BEGIN
   END IF;
 END $$;
 
+-- Anticipo: vacaciones pedidas a cuenta de lo generado en el ciclo en curso (aún no consolidado)
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS is_advance BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- Jerarquía: cada sección puede depender de otra (Dirección ← Almacén, Administración…)
 ALTER TABLE sections ADD COLUMN IF NOT EXISTS parent_id INT REFERENCES sections(id) ON DELETE SET NULL;
 

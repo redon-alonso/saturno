@@ -27,6 +27,17 @@ const allDay = ref(true); // lo sencillo por defecto: solo se eligen horas si se
 const error = ref('');
 const busy = ref(false);
 
+// Saldo de vacaciones en la fecha de la ausencia: lo consolidado y lo que se podría adelantar hasta ese día
+const balAt = ref(null);
+let balSeq = 0;
+watch(() => form.start_date, async (date) => {
+  const seq = ++balSeq;
+  try {
+    const b = await api(`/balance?as_of=${date}`);
+    if (seq === balSeq) balAt.value = b;
+  } catch { if (seq === balSeq) balAt.value = null; }
+}, { immediate: true }); // después de `form`: con immediate se lee al instante
+
 const type = computed(() => session.types.find((t) => t.id === form.type_id));
 const canHours = computed(() => !!type.value?.allows_hours);
 const mode = computed(() => (canHours.value && !allDay.value ? 'horas' : 'dias'));
@@ -62,12 +73,17 @@ const startClosed = computed(() => mode.value === 'dias' && !!form.start_date &&
 const balanceInfo = computed(() => {
   const t = type.value;
   if (!t) return null;
+  const balance = balAt.value ?? session.balance;
   if (t.deducts_vacation) {
     // Se ven y se piden días enteros; lo que quedará se trunca igual que el saldo
-    const exact = session.balance?.vacation?.available ?? 0;
-    const available = session.balance?.vacation?.usable ?? 0;
-    const after = days.value > available ? available - days.value : wholeDays(exact - days.value);
-    return { available, after, unit: 'días de vacaciones' };
+    const exact = balance?.vacation?.available ?? 0;
+    const available = balance?.vacation?.usable ?? 0;
+    // Anticipo: por días completos, hasta lo generado en el ciclo hasta el inicio de la ausencia
+    const advanceable = mode.value === 'dias' ? Math.max(available, balance?.vacation?.advanceable ?? available) : available;
+    const advance = days.value > available && days.value <= advanceable ? days.value - Math.max(available, 0) : 0;
+    const limit = advance ? advanceable : available;
+    const after = days.value > limit ? limit - days.value : wholeDays(exact - days.value);
+    return { available, after, advance, extra: advanceable - Math.max(available, 0), unit: 'días de vacaciones' };
   }
   const quota = session.balance?.quotas?.find((x) => x.type_id === t.id);
   if (quota) return { available: quota.available, after: quota.available - days.value, unit: `días de ${t.name.toLowerCase()}` };
@@ -139,7 +155,7 @@ async function submit() {
       <textarea v-model="form.comment" rows="2" maxlength="500" />
     </label>
 
-    <div class="notice" :class="{ warn: startClosed || hoursInfo?.problem || (balanceInfo && balanceInfo.after < 0) }">
+    <div class="notice" :class="{ warn: startClosed || hoursInfo?.problem || (balanceInfo && (balanceInfo.after < 0 || balanceInfo.advance)) }">
       <template v-if="startClosed">Ese día no es laborable (fin de semana o festivo): elige otro día de inicio.</template>
       <template v-else-if="hoursInfo?.problem">{{ hoursInfo.problem }}</template>
       <template v-else-if="mode === 'horas'">
@@ -151,9 +167,17 @@ async function submit() {
         {{ type?.count_mode === 'laborable' ? (days === 1 ? 'laborable' : 'laborables (sin festivos)') : (days === 1 ? 'natural' : 'naturales') }}
       </template>
       <template v-if="balanceInfo && !startClosed && !hoursInfo?.problem && days">
-        · tienes {{ num(balanceInfo.available) }} {{ balanceInfo.unit }},
-        <template v-if="balanceInfo.after >= 0">te quedarán <b>{{ num(balanceInfo.after) }}</b>.</template>
-        <template v-else><b>no tienes saldo suficiente.</b></template>
+        · tienes {{ num(Math.max(balanceInfo.available, 0)) }} {{ balanceInfo.unit }}<template
+          v-if="balanceInfo.available < 0"> ({{ num(-balanceInfo.available) }} ya adelantados)</template>,
+        <template v-if="balanceInfo.advance">
+          <b>{{ num(balanceInfo.advance) }} {{ balanceInfo.advance === 1 ? 'día' : 'días' }} como anticipo</b>, a cuenta de lo
+          generado este ciclo: tu jefe lo verá marcado al aprobarlo.
+        </template>
+        <template v-else-if="balanceInfo.after >= 0">te quedarán <b>{{ num(balanceInfo.after) }}</b>.</template>
+        <template v-else>
+          <b>no tienes saldo suficiente</b><template v-if="balanceInfo.extra > 0 && mode === 'dias'">
+          (como anticipo se pueden adelantar hasta {{ num(balanceInfo.extra) }} días más)</template>.
+        </template>
       </template>
     </div>
 
