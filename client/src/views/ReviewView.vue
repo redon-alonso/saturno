@@ -133,7 +133,7 @@ const calendarLink = (r) => ({
       <button class="btn" :disabled="exporting || !exportFrom || !exportTo" @click="exportRequests">⬇ Exportar CSV</button>
     </section>
     <section v-if="tab === 'historial'" class="card table-wrap">
-      <table>
+      <table class="cards history-table">
         <thead>
           <tr>
             <th>Persona</th><th>Motivo</th><th>Fechas</th><th class="num">Duración</th><th>Estado</th><th>Revisó</th>
@@ -141,17 +141,17 @@ const calendarLink = (r) => ({
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in history" :key="r.id">
-            <td>{{ r.user_name }}</td>
-            <td><span class="row"><span class="dot" :style="{ '--c': r.color }" />{{ r.type_name }}</span></td>
-            <td>{{ range(r) }}</td>
-            <td class="num">{{ amount(r) }}</td>
-            <td>
+          <tr v-for="r in history" :key="r.id" class="h-row">
+            <td class="c-person">{{ r.user_name }}</td>
+            <td class="c-type"><span class="row"><span class="dot" :style="{ '--c': r.color }" />{{ r.type_name }}</span></td>
+            <td class="c-dates">{{ range(r) }}</td>
+            <td class="num c-amount">{{ amount(r) }}</td>
+            <td class="c-status">
               <span class="badge" :class="r.status">{{ STATUS_LABELS[r.status] }}</span>
               <span v-if="r.is_advance" class="badge">anticipo</span>
             </td>
-            <td class="small">
-              {{ r.reviewer_name }}<div v-if="r.review_comment" class="muted">{{ r.review_comment }}</div>
+            <td class="small c-who">
+              <span v-if="r.reviewer_name" class="rev">{{ r.reviewer_name }}</span><div v-if="r.review_comment" class="muted">{{ r.review_comment }}</div>
               <div v-if="r.interrupted_by_name" class="cancel-info">
                 Interrumpida por {{ r.interrupted_by_name }} (estaba hasta el {{ dmy(r.original_end_date) }})<template
                   v-if="r.interrupt_reason">: «{{ r.interrupt_reason }}»</template>
@@ -161,7 +161,7 @@ const calendarLink = (r) => ({
                 <template v-if="r.cancel_reason">: «{{ r.cancel_reason }}»</template>
               </div>
             </td>
-            <td v-if="isAdmin" class="num cancel-cell">
+            <td v-if="isAdmin" class="num cancel-cell c-actions">
               <CancelBox v-if="r.status === 'aprobada'" :request-id="r.id" @cancelled="load" />
             </td>
           </tr>
@@ -180,7 +180,7 @@ const calendarLink = (r) => ({
     </section>
 
     <section v-if="tab === 'equipo'" class="card table-wrap">
-      <table>
+      <table class="cards team-table">
         <thead>
           <tr>
             <th>Persona</th><th>Sección</th><th>Alta</th>
@@ -189,15 +189,15 @@ const calendarLink = (r) => ({
           </tr>
         </thead>
         <tbody>
-          <tr v-for="u in team" :key="u.id">
-            <td>{{ u.name }}</td>
-            <td class="muted">{{ u.section_name }}</td>
-            <td class="muted small">{{ short(u.hire_date) }} {{ u.hire_date.slice(0, 4) }}</td>
-            <td class="num">{{ wholeDays(u.balance.vacation.total) }}</td>
-            <td class="num">{{ num(u.balance.vacation.used) }}</td>
-            <td class="num">{{ num(u.balance.vacation.pending) }}</td>
-            <td class="num"><b>{{ u.balance.vacation.usable }}</b></td>
-            <td class="small">
+          <tr v-for="u in team" :key="u.id" class="t-row">
+            <td class="c-person">{{ u.name }}</td>
+            <td class="muted c-section">{{ u.section_name }}</td>
+            <td class="muted small c-hire" data-label="Alta">{{ short(u.hire_date) }} {{ u.hire_date.slice(0, 4) }}</td>
+            <td class="num c-gen" data-label="Acumulados">{{ wholeDays(u.balance.vacation.total) }}</td>
+            <td class="num c-used" data-label="Disfrutados">{{ num(u.balance.vacation.used) }}</td>
+            <td class="num c-pend" data-label="Pendientes">{{ num(u.balance.vacation.pending) }}</td>
+            <td class="num c-avail" data-label="Disponibles"><b>{{ u.balance.vacation.usable }}</b></td>
+            <td class="small c-quotas">
               <div v-for="qt in u.balance.quotas" :key="qt.type_id">{{ qt.name }}: {{ num(qt.available) }}/{{ num(qt.quota) }}</div>
             </td>
           </tr>
@@ -237,4 +237,52 @@ const calendarLink = (r) => ({
 }
 @keyframes pop-in { from { transform: scale(.4) rotate(-20deg); opacity: 0; } }
 @media (max-width: 720px) { .review { grid-template-columns: 1fr; } }
+
+/* ---- Móvil: cada fila del historial y de los saldos es una tarjeta (la misma tabla, otra disposición) ---- */
+@media (max-width: 640px) {
+  .export-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .export-row .field { width: auto; }
+  .export-row .field:has(select), .export-row .btn { grid-column: 1 / -1; }
+
+  table.cards, table.cards tbody { display: block; }
+  table.cards thead { display: none; }
+  table.cards td { display: block; padding: 0; border: 0; text-align: left; }
+  table.cards tr {
+    display: grid; gap: 4px 10px; padding: 14px; margin-bottom: 10px; border-radius: 14px;
+    background: var(--surface-2); border: 1px solid var(--border);
+  }
+  table.cards tr:hover { background: var(--surface-2); }
+
+  .history-table tr {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "type status" "person person" "dates amount" "who who" "actions actions";
+  }
+  .history-table .c-type { grid-area: type; font-weight: 600; }
+  .history-table .c-status { grid-area: status; text-align: right; }
+  .history-table .c-person { grid-area: person; font-weight: 700; font-size: 1.02rem; }
+  .history-table .c-dates { grid-area: dates; color: var(--muted); }
+  .history-table .c-amount { grid-area: amount; text-align: right; font-weight: 600; }
+  .history-table .c-who { grid-area: who; }
+  .history-table .rev::before { content: 'Revisó: '; color: var(--muted); } /* en escritorio lo dice la columna */
+  .history-table .c-who:empty { display: none; }
+  .history-table .c-actions { grid-area: actions; text-align: right; }
+
+  .team-table tr {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-areas: "person person avail" "section hire avail" "gen used pend" "quotas quotas quotas";
+  }
+  .team-table .c-person { grid-area: person; font-weight: 700; font-size: 1.02rem; }
+  .team-table .c-section { grid-area: section; }
+  .team-table .c-hire { grid-area: hire; }
+  .team-table .c-avail { grid-area: avail; text-align: right; font-size: 1.6rem; line-height: 1.1; }
+  .team-table .c-gen { grid-area: gen; }
+  .team-table .c-used { grid-area: used; }
+  .team-table .c-pend { grid-area: pend; }
+  .team-table .c-quotas { grid-area: quotas; color: var(--muted); }
+  .team-table td[data-label]::before {
+    content: attr(data-label); display: block; font-size: .66rem; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .team-table .c-gen, .team-table .c-used, .team-table .c-pend { padding-top: 8px; border-top: 1px dashed var(--border); }
+}
 </style>
